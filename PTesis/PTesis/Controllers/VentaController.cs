@@ -998,7 +998,9 @@ namespace PTesis.Controllers
                 new SelectListItem { Value = "VENTA", Text = "Venta" },
                 new SelectListItem { Value = "COMPRA", Text = "Compra" },
                 new SelectListItem { Value = "TRANSFERENCIA", Text = "Transferencia" },
-                new SelectListItem { Value = "AJUSTE", Text = "Ajuste" },
+                new SelectListItem { Value = "ENTRADA", Text = "Ajuste de entrada" },
+                new SelectListItem { Value = "SALIDA", Text = "Ajuste de salida" },
+                new SelectListItem { Value = "AJUSTE", Text = "Ajuste (desde Ventas)" },
                 new SelectListItem { Value = "ANULACION", Text = "Anulación" }
             };
             return new SelectList(tipos, "Value", "Text");
