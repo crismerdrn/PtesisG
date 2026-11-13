@@ -68,7 +68,7 @@
                 @Html.DropDownListFor(
 m => m.IdPolleriaDestino,
 ((IEnumerable<SelectListItem>)ViewBag.ListaPollerias)
-    .Where(p => p.Value != Model.IdPolleriaOrigen.ToString()),
+    .Select(p => new SelectListItem { Value = p.Value, Text = p.Text }),
 "Seleccione pollería destino",
 new
 {
@@ -184,7 +184,7 @@ new
                 if ($('#PolleriaDestinoSelect').val() === origenId) {
                     $('#PolleriaDestinoSelect').val('');
                 }
-            });
+            }).trigger('change');
         });
 
         function cargarStockOrigen() {

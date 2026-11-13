@@ -561,7 +561,8 @@ namespace PTesis.Controllers
             try
             {
                 var errorTransferencia = ValidarStockAjustable(transferencia.IdProducto, transferencia.IdPolleriaOrigen)
-                    ?? (EsPolleriaActiva(transferencia.IdPolleriaDestino) ? null : "La pollería de destino no existe o está inactiva.");
+                    ?? (EsPolleriaActiva(transferencia.IdPolleriaDestino) ? null : "La pollería de destino no existe o está inactiva.")
+                    ?? (transferencia.IdPolleriaDestino == transferencia.IdPolleriaOrigen ? "La pollería de destino debe ser distinta a la de origen." : null);
                 if (errorTransferencia != null)
                 {
                     TempData["Error"] = errorTransferencia;
