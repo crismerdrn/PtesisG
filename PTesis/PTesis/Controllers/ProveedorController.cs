@@ -8,6 +8,11 @@ namespace PTesis.Controllers
 {
     public class ProveedorController : BaseController
     {
+        protected override string[] PermisosModulo
+        {
+            get { return new[] { "Proveedores" }; }
+        }
+
         private CDProveedor datos = new CDProveedor();
 
         public ActionResult Index(string buscar)
@@ -63,9 +68,9 @@ namespace PTesis.Controllers
                 if (proveedor == null)
                 {
                     TempData["Error"] = "Proveedor no encontrado";
-                    return HttpNotFound();
+                    return RedirectToAction("Index");
                 }
-                return View(proveedor);
+                return RedirectToAction("Edit", new { id });
             }
             catch (Exception ex)
             {

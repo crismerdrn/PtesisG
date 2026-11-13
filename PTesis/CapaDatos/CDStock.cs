@@ -349,7 +349,7 @@ namespace CapaDatos
                                 observaciones = dr["observaciones"] != DBNull.Value ? dr["observaciones"].ToString() : "",
                                 id_polleria = Convert.ToInt32(dr["id_polleria"]),
                                 id_usuario = Convert.ToInt32(dr["id_usuario"]),
-                                fecha_registro = Convert.ToDateTime(dr["fecha_registro"]),
+                                fecha_registro = Convert.ToDateTime(dr["fecha_movimiento"]),
                                 nombre_item = dr["item_nombre"] != DBNull.Value
                 ? dr["item_nombre"].ToString()
                 : "Desconocido",
@@ -408,8 +408,8 @@ namespace CapaDatos
                                 stock_anterior = Convert.ToDecimal(dr["stock_anterior"]),
                                 stock_nuevo = Convert.ToDecimal(dr["stock_nuevo"]),
                                 observaciones = dr["observaciones"] != DBNull.Value ? dr["observaciones"].ToString() : "",
-                                nombre_item = dr["item_nombre"] != DBNull.Value
-                ? dr["item_nombre"].ToString()
+                                nombre_item = dr["producto_nombre"] != DBNull.Value
+                ? dr["producto_nombre"].ToString()
                 : "Desconocido",
 
                                 nombre_polleria = dr["polleria_nombre"] != DBNull.Value
@@ -718,6 +718,9 @@ namespace CapaDatos
 
         private void AddNullableParameter(SqlCommand cmd, string parameterName, object value)
         {
+            if (value is string texto && string.IsNullOrWhiteSpace(texto))
+                value = null;
+
             if (value != null)
                 cmd.Parameters.AddWithValue(parameterName, value);
             else

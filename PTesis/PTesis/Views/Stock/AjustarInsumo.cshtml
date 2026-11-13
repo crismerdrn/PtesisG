@@ -1,0 +1,166 @@
+﻿@model CapaModelo.CMStockAjuste
+
+@{
+    ViewBag.Title = "Ajustar Stock de Insumo";
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-adjust me-2 text-danger"></i>Ajustar Stock de Insumo</h2>
+        <p class="text-muted">Ajuste manual del inventario de insumos</p>
+    </div>
+
+    @using (Html.BeginForm("AjustarInsumo", "Stock", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="row">
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="fas fa-info-circle me-2"></i>Información del Insumo</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Insumo:</label>
+                                <div class="form-control bg-light">@Model.item_nombre</div>
+                                @Html.HiddenFor(m => m.id_item)
+                                @Html.HiddenFor(m => m.tipo_item)
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-bold">Polleria:</label>
+                                <div class="form-control bg-light">@Model.polleria_nombre</div>
+                                @Html.HiddenFor(m => m.id_polleria)
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-bold">Stock Actual:</label>
+                                <div class="form-control bg-light text-center fw-bold">@Model.stock_actual.ToString("N2")</div>
+                            </div>
+                            <div class="col-md-8">
+                                <label for="nuevo_stock" class="form-label fw-bold">Nuevo Stock:</label>
+                                @Html.TextBoxFor(m => m.nuevo_stock, new
+                                {
+                                    @class = "form-control",
+                                    type = "number",
+                                    step = "0.01",
+                                    min = "0",
+                                    required = "required"
+                                })
+                                <div class="invalid-feedback">
+                                    Por favor ingrese el nuevo stock
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label for="observaciones" class="form-label fw-bold">Observaciones:</label>
+                                @Html.TextAreaFor(m => m.observaciones, new
+                                {
+                                    @class = "form-control",
+                                    rows = "3",
+                                    placeholder = "Motivo del ajuste de stock..."
+                                })
+                            </div>
+                        </div>
+
+                        <div class="alert alert-info" role="alert">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Este ajuste registrará un movimiento en el historial y actualizará el stock actual.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="fas fa-user me-2"></i>Información del Usuario</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Usuario:</label>
+                            <div class="form-control bg-light">@ViewBag.UsuarioNombre</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Fecha:</label>
+                            <div class="form-control bg-light">@DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm border-0 mb-4">
+                    <div class="card-header bg-light">
+                        <h5 class="card-title mb-0"><i class="fas fa-calculator me-2"></i>Resumen del Ajuste</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Stock Actual:</span>
+                            <span class="fw-bold">@Model.stock_actual.ToString("N2")</span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Nuevo Stock:</span>
+                            <span class="fw-bold text-primary" id="nuevoStockPreview">0.00</span>
+                        </div>
+                        <hr>
+                        <div class="d-flex justify-content-between">
+                            <span>Diferencia:</span>
+                            <span class="fw-bold" id="diferenciaPreview">0.00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-grid gap-2">
+                    <button type="submit" class="btn btn-danger btn-lg">
+                        <i class="fas fa-save me-2"></i>Guardar Ajuste
+                    </button>
+                    <a href="@Url.Action("Insumos", "Stock")" class="btn btn-secondary">
+                        <i class="fas fa-times me-2"></i>Cancelar
+                    </a>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@section JavaScript {
+    <script>
+        $(document).ready(function() {
+            // Calcular diferencia en tiempo real
+            $('#nuevo_stock').on('input', function() {
+                var stockActual = parseFloat('@Model.stock_actual'.replace(',', '.'));
+                var nuevoStock = parseFloat($(this).val()) || 0;
+
+                $('#nuevoStockPreview').text(nuevoStock.toFixed(2));
+
+                var diferencia = nuevoStock - stockActual;
+                $('#diferenciaPreview').text(diferencia.toFixed(2));
+
+                // Cambiar color según si es entrada o salida
+                var diferenciaElement = $('#diferenciaPreview');
+                diferenciaElement.removeClass('text-success text-danger');
+
+                if (diferencia > 0) {
+                    diferenciaElement.addClass('text-success');
+                    diferenciaElement.prepend('<i class="fas fa-arrow-up me-1"></i>');
+                } else if (diferencia < 0) {
+                    diferenciaElement.addClass('text-danger');
+                    diferenciaElement.prepend('<i class="fas fa-arrow-down me-1"></i>');
+                }
+            });
+
+            // Validación del formulario
+            $('form').submit(function(e) {
+                if (!this.checkValidity()) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+                $(this).addClass('was-validated');
+            });
+        });
+    </script>
+}

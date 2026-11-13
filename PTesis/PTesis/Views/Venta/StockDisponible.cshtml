@@ -16,7 +16,7 @@
     <div class="d-flex justify-content-between align-items-center mt-4">
         <h2 class="fw-bold"><i class="fas fa-boxes me-2 text-info"></i>Stock Disponible</h2>
         <div>
-            @if (ViewBag.PuedeCrear != null && (bool)ViewBag.PuedeCrear ("Administrador"))
+            @if (ViewBag.PuedeAjustarStock == true)
             {
                 @Html.ActionLink("Transferir Stock", "TransferirStock", null, new { @class = "btn btn-outline-primary me-2" })
                 @Html.ActionLink("Ajustar Stock", "AjustarStock", null, new { @class = "btn btn-outline-warning" })
@@ -166,20 +166,20 @@
                                     </td>
                                     <td class="text-center">
                                         <div class="btn-group" role="group">
-                                            @*if (PuedeCrear("Administrador"))
+                                            @if (ViewBag.PuedeAjustarStock == true)
                                             {
                                                 @Html.ActionLink("Ajustar", "AjustarStock",
                                                     new { idProducto = producto.IdProducto, idPolleria = producto.IdPolleria },
                                                     new { @class = "btn btn-warning btn-sm", title = "Ajustar stock" })
 
                                                 @Html.ActionLink("Transferir", "TransferirStock",
-                                                    new { idProducto = producto.IdProducto, idPolleriaOrigen = producto.IdPolleria },
+                                                    null,
                                                     new { @class = "btn btn-info btn-sm ms-1", title = "Transferir a otra pollería" })
                                             }
                                             @Html.ActionLink("Historial", "ReporteMovimientosStock",
                                                 new { idItem = producto.IdProducto, tipoItem = "PRODUCTO" },
                                                 new { @class = "btn btn-secondary btn-sm ms-1", title = "Ver historial" })
-                                        </div>*@
+                                        </div>
                                     </td>
                                 </tr>
                             }

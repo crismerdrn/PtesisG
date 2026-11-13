@@ -10,6 +10,11 @@ namespace PTesis.Controllers
 {
     public class ProductoController : BaseController
     {
+        protected override string[] PermisosModulo
+        {
+            get { return new[] { "Productos" }; }
+        }
+
         private CDProducto cdProducto = new CDProducto();
         private CDMedida cdMedida = new CDMedida();
         private CDTipoProducto cdTipoProducto = new CDTipoProducto();

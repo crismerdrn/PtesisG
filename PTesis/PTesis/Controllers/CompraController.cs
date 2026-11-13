@@ -519,7 +519,7 @@ namespace PTesis.Controllers
             ViewBag.MostrarInfoStock = true;
             ViewBag.InfoStock = "⚠️ ALERTA: Al completar esta compra, se actualizará el stock de todos los productos y/o insumos.";
 
-            return View();
+            return View(compra);
         }
 
         [HttpPost]

@@ -340,6 +340,12 @@
     <Content Include="Views\Stock\StockBajoProductos.cshtml" />
     <Content Include="Views\Stock\Insumos.cshtml" />
     <Content Include="Views\Stock\AjustarProducto.cshtml" />
+    <Content Include="Views\Stock\AjustarInsumo.cshtml" />
+    <Content Include="Views\Stock\ConfigurarMinimo.cshtml" />
+    <Content Include="Views\Stock\Historial.cshtml" />
+    <Content Include="Views\Stock\Kardex.cshtml" />
+    <Content Include="Views\Stock\Transferir.cshtml" />
+    <Content Include="Views\Venta\ReporteMovimientosStock.cshtml" />
     <Content Include="Views\Compra\Anular.cshtml" />
     <Content Include="Views\Compra\Completar.cshtml" />
     <Content Include="Views\Venta\AjustarStock.cshtml" />

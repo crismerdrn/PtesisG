@@ -102,7 +102,7 @@
                 <div class="d-flex justify-content-end gap-2">
                     @Html.ActionLink("Cancelar", "Details", new { id = Model.id_venta },
                         new { @class = "btn btn-secondary px-4" })
-                    <button type="submit" class="btn btn-danger px-4" onclick="return confirmarAnulacion()">
+                    <button type="submit" class="btn btn-danger px-4" onclick="return confirmarAnulacion(this)">
                         <i class="fas fa-ban me-1"></i> Confirmar Anulación
                     </button>
                 </div>
@@ -113,7 +113,7 @@
 
 @section JavaScript{
     <script>
-        function confirmarAnulacion() {
+        function confirmarAnulacion(boton) {
             const motivo = $('textarea[name="motivo"]').val().trim();
 
             if (!motivo) {
@@ -125,10 +125,11 @@
                 return false;
             }
 
-            // Mostrar loading
-            $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Anulando...');
+            const form = boton.form;
+            $(boton).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Anulando...');
+            form.submit();
 
-            return true;
+            return false;
         }
     </script>
 }

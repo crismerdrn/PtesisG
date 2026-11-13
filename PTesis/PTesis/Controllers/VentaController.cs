@@ -61,9 +61,7 @@ namespace PTesis.Controllers
 
             int? idPolleria = polleriaActual?.id_polleria;
 
-            // Obtener lista de ventas (ajustar según tus métodos existentes)
-            // var lista = cdVenta.ListarVentas(estado, fechaInicio, fechaFin, idCliente, idUsuarioFiltro, idPolleria);
-            var lista = new List<CMVenta>(); // Reemplazar con tu método real
+            var lista = cdVenta.ListarVentas(estado, fechaInicio, fechaFin, idCliente, idUsuarioFiltro, null);
 
             // Filtro de búsqueda
             if (!string.IsNullOrEmpty(buscar))
@@ -324,9 +322,7 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Obtener venta (ajustar según tu método existente)
-            // var venta = cdVenta.ObtenerDetallesVentaConSP(id);
-            var venta = new CMVenta(); // Reemplazar con tu método real
+            var venta = cdVenta.ObtenerDetallesVenta(id);
 
             if (venta == null)
             {
@@ -416,6 +412,7 @@ namespace PTesis.Controllers
             ViewBag.IdPolleria = idPolleria;
             ViewBag.SoloConStock = soloConStock;
             ViewBag.PolleriaActiva = polleriaActiva;
+            ViewBag.PuedeAjustarStock = TienePermiso("Administrador");
 
             return View(stock);
         }
@@ -956,12 +953,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                // Implementar según tu capa de datos
-                var pollerias = new List<CMPolleria>
-                {
-                    new CMPolleria { id_polleria = 1, Nombre = "Polleria 1" },
-                    new CMPolleria { id_polleria = 2, Nombre = "Polleria 2" }
-                };
+                var pollerias = new CDPolleria().Listar();
                 return new SelectList(pollerias, "id_polleria", "Nombre");
             }
             catch
@@ -1007,7 +999,9 @@ namespace PTesis.Controllers
                 new SelectListItem { Value = "VENTA", Text = "Venta" },
                 new SelectListItem { Value = "COMPRA", Text = "Compra" },
                 new SelectListItem { Value = "TRANSFERENCIA", Text = "Transferencia" },
-                new SelectListItem { Value = "AJUSTE", Text = "Ajuste" },
+                new SelectListItem { Value = "ENTRADA", Text = "Ajuste de entrada" },
+                new SelectListItem { Value = "SALIDA", Text = "Ajuste de salida" },
+                new SelectListItem { Value = "AJUSTE", Text = "Ajuste (desde Ventas)" },
                 new SelectListItem { Value = "ANULACION", Text = "Anulación" }
             };
             return new SelectList(tipos, "Value", "Text");

@@ -456,7 +456,9 @@ namespace CapaDatos
 
                     ELSE 'NORMAL'
 
-                END AS EstadoStock
+                END AS EstadoStock,
+
+                s.Fecha_ultimo_movimiento AS FechaUltimoMovimiento
 
             FROM PRODUCTO p
 
@@ -711,9 +713,9 @@ namespace CapaDatos
 
                     cmd.Parameters.AddWithValue("@fecha_hasta", fechaHasta ?? (object)DBNull.Value);
 
-                    cmd.Parameters.AddWithValue("@tipo_item", tipoItem ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@tipo_item", string.IsNullOrWhiteSpace(tipoItem) ? (object)DBNull.Value : tipoItem);
 
-                    cmd.Parameters.AddWithValue("@tipo_movimiento", tipoMovimiento ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@tipo_movimiento", string.IsNullOrWhiteSpace(tipoMovimiento) ? (object)DBNull.Value : tipoMovimiento);
 
                     cmd.Parameters.AddWithValue("@id_item", idItem ?? (object)DBNull.Value);
 
@@ -761,7 +763,7 @@ namespace CapaDatos
 
                                 observaciones = dr["observaciones"].ToString(),
 
-                                fecha_registro = Convert.ToDateTime(dr["fecha_registro"]),
+                                fecha_registro = Convert.ToDateTime(dr["fecha_movimiento"]),
 
                                 nombre_item = dr["item_nombre"].ToString(),
 
@@ -998,6 +1000,63 @@ namespace CapaDatos
 
             }
 
+        }
+
+        public List<CMVenta> ListarVentas(string estado, DateTime? fechaInicio, DateTime? fechaFin,
+                                          int? idCliente, int? idUsuario, int? idPolleria)
+        {
+            string query = @"
+                SELECT
+                    v.id_venta,
+                    ISNULL(v.NumeroVenta, '') AS NumeroVenta,
+                    ISNULL(v.Total_venta, 0) AS Total_venta,
+                    v.Fecha_venta,
+                    v.hora_venta,
+                    ISNULL(v.Estado, 'COMPLETADA') AS Estado,
+                    ISNULL(v.Tipo_venta, '') AS Tipo_venta,
+                    v.USUARIOS_id_usuario,
+                    v.CLIENTE_id_cliente,
+                    v.POLLERIA_id_polleria,
+                    v.TIPO_VENTA_id_tipoVenta,
+                    ISNULL(tv.nombre, '') AS NombreTipoVenta,
+                    ISNULL(CONCAT(u.nombre, ' ', u.apellido), 'Vendedor General') AS NombreVendedor,
+                    ISNULL(CONCAT(c.Nombre, ' ', c.Apellido), 'Cliente General') AS NombreCliente,
+                    ISNULL(c.Telefono, '') AS TelefonoCliente,
+                    ISNULL(p.Nombre, '') AS NombrePolleria
+                FROM VENTAS v
+                LEFT JOIN USUARIOS u ON v.USUARIOS_id_usuario = u.id_usuario
+                LEFT JOIN CLIENTE c ON v.CLIENTE_id_cliente = c.id_cliente
+                LEFT JOIN POLLERIA p ON v.POLLERIA_id_polleria = p.id_polleria
+                LEFT JOIN TIPO_VENTA tv ON v.TIPO_VENTA_id_tipoVenta = tv.id_tipoVenta
+                WHERE (@Estado IS NULL OR v.Estado = @Estado)
+                  AND (@FechaInicio IS NULL OR CAST(v.Fecha_venta AS date) >= @FechaInicio)
+                  AND (@FechaFin IS NULL OR CAST(v.Fecha_venta AS date) <= @FechaFin)
+                  AND (@IdCliente IS NULL OR v.CLIENTE_id_cliente = @IdCliente)
+                  AND (@IdUsuario IS NULL OR v.USUARIOS_id_usuario = @IdUsuario)
+                  AND (@IdPolleria IS NULL OR v.POLLERIA_id_polleria = @IdPolleria)
+                ORDER BY v.Fecha_venta DESC, v.hora_venta DESC, v.id_venta DESC";
+
+            using (var conexion = new SqlConnection(Conexion.CN))
+            {
+                var lista = conexion.Query<CMVenta>(query, new
+                {
+                    Estado = string.IsNullOrWhiteSpace(estado) ? null : estado,
+                    FechaInicio = fechaInicio?.Date,
+                    FechaFin = fechaFin?.Date,
+                    IdCliente = idCliente,
+                    IdUsuario = idUsuario,
+                    IdPolleria = idPolleria
+                }).ToList();
+
+                foreach (var venta in lista)
+                {
+                    venta.FechaVentaFormateada = venta.Fecha_venta.ToString("dd/MM/yyyy");
+                    venta.HoraVentaFormateada = venta.hora_venta.ToString(@"hh\:mm");
+                    venta.TotalVentaFormateado = venta.Total_venta.ToString("N2");
+                }
+
+                return lista;
+            }
         }
 
         public CMVenta ObtenerDetallesVenta(int idVenta)
