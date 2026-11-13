@@ -172,6 +172,18 @@ BEGIN
 
         BEGIN TRANSACTION;
 
+        -- Marca la venta dentro de la transacción: si otra anulación llegó antes, no se revierte dos veces.
+        UPDATE VENTAS
+        SET Estado = 'ANULADA'
+        WHERE id_venta = @IdVenta AND Estado <> 'ANULADA';
+
+        IF @@ROWCOUNT = 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SET @Mensaje = 'La venta ya está anulada';
+            RETURN;
+        END
+
         -- Se revierte exactamente lo que registró la venta en el kardex.
         INSERT INTO @Reversion (id_item, tipo_item, cantidad)
         SELECT id_item, tipo_item, SUM(stock_anterior - stock_nuevo)
@@ -221,10 +233,6 @@ BEGIN
         FROM STOCK_INSUMO si
         INNER JOIN @Reversion r ON r.tipo_item = 'INSUMO' AND si.INSUMO_id_insumo = r.id_item
         WHERE si.POLLERIA_id_polleria = @IdPolleria;
-
-        UPDATE VENTAS
-        SET Estado = 'ANULADA'
-        WHERE id_venta = @IdVenta;
 
         INSERT INTO AUDITORIA_VENTAS (id_venta, accion, fecha, id_usuario, motivo, total_venta)
         VALUES (@IdVenta, 'ANULACION', GETDATE(), @IdUsuario, @Motivo, @TotalVenta);
