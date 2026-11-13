@@ -59,7 +59,7 @@
                 </div>
 
                 <div class="col-md-2">
-                    <label class="form-label small fw-bold">Tipo Venta</label>
+                    <label class="form-label small fw-bold">Forma de Pago</label>
                     @Html.DropDownList("tipoVenta", ViewBag.ListaTiposVenta as List<SelectListItem>,
                         new { @class = "form-select" })
                 </div>
@@ -139,7 +139,11 @@
                                     </td>
 
                                     <td class="text-center">
-                                        <span class="badge bg-light text-dark">@venta.Tipo_venta</span>
+                                        <span class="badge bg-light text-dark">@venta.TipoPago</span>
+                                        @if (!string.IsNullOrEmpty(venta.NombreTipoVenta))
+                                        {
+                                            <br /><small class="text-muted">@venta.NombreTipoVenta</small>
+                                        }
                                     </td>
 
                                     <td class="text-center">

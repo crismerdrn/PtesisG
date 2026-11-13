@@ -1019,6 +1019,7 @@ namespace CapaDatos
                     v.POLLERIA_id_polleria,
                     v.TIPO_VENTA_id_tipoVenta,
                     ISNULL(tv.nombre, '') AS NombreTipoVenta,
+                    ISNULL(tp.nombre, v.Tipo_venta) AS TipoPago,
                     ISNULL(CONCAT(u.nombre, ' ', u.apellido), 'Vendedor General') AS NombreVendedor,
                     ISNULL(CONCAT(c.Nombre, ' ', c.Apellido), 'Cliente General') AS NombreCliente,
                     ISNULL(c.Telefono, '') AS TelefonoCliente,
@@ -1028,6 +1029,7 @@ namespace CapaDatos
                 LEFT JOIN CLIENTE c ON v.CLIENTE_id_cliente = c.id_cliente
                 LEFT JOIN POLLERIA p ON v.POLLERIA_id_polleria = p.id_polleria
                 LEFT JOIN TIPO_VENTA tv ON v.TIPO_VENTA_id_tipoVenta = tv.id_tipoVenta
+                LEFT JOIN TIPO_PAGO tp ON CONVERT(varchar(50), tp.id_tipoPago) = v.Tipo_venta
                 WHERE (@Estado IS NULL OR v.Estado = @Estado)
                   AND (@FechaInicio IS NULL OR CAST(v.Fecha_venta AS date) >= @FechaInicio)
                   AND (@FechaFin IS NULL OR CAST(v.Fecha_venta AS date) <= @FechaFin)
@@ -1089,13 +1091,15 @@ namespace CapaDatos
                     ISNULL(c.Email, '') AS EmailCliente,
                     ISNULL(p.Nombre, '') AS NombrePolleria,
                     ISNULL(p.Direccion, '') AS DireccionPolleria,
-                    ISNULL(tp.nombre, v.Tipo_venta) AS TipoPago
+                    ISNULL(tp.nombre, v.Tipo_venta) AS TipoPago,
+                    ISNULL(tv.nombre, '') AS NombreTipoVenta
                 FROM VENTAS v
                 LEFT JOIN USUARIOS u ON v.USUARIOS_id_usuario = u.id_usuario
                 LEFT JOIN CLIENTE c ON v.CLIENTE_id_cliente = c.id_cliente
                 LEFT JOIN POLLERIA p ON v.POLLERIA_id_polleria = p.id_polleria
                 LEFT JOIN PAGO_VENTAS pv ON pv.VENTAS_id_venta = v.id_venta
                 LEFT JOIN TIPO_PAGO tp ON pv.TIPO_PAGO_id_tipoPago = tp.id_tipoPago
+                LEFT JOIN TIPO_VENTA tv ON v.TIPO_VENTA_id_tipoVenta = tv.id_tipoVenta
                 WHERE v.id_venta = @IdVenta";
 
                     venta = conexion.QueryFirstOrDefault<CMVenta>(queryCabecera, new { IdVenta = idVenta });

@@ -1,15 +1,10 @@
-﻿@model CapaModelo.CMCompra
-@using CapaModelo
+﻿@model CapaModelo.CMVenta
 
 @{
     Layout = null;
-    ViewBag.Title = "Comprobante de Compra";
-
-    // Datos fijos de la pollería - MÁS SIMPLE
-    string nombreEmpresa = "El Escondite del Loro";
-    string direccionEmpresa = "B/ La Cabaña";
-    string telefonoEmpresa = "4578512";
-    string fechaImpresion = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss");
+    bool esTicket = ViewBag.Tipo == "TICKET";
+    string nombreEmpresa = string.IsNullOrWhiteSpace(Model.NombrePolleria) ? "Pollería" : Model.NombrePolleria;
+    string titulo = esTicket ? "Ticket de Venta" : "Comprobante de Venta";
 }
 
 <!DOCTYPE html>
@@ -17,439 +12,137 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Comprobante de Compra #@Model.id_compra</title>
+    <title>@titulo @Model.NumeroVenta</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-
-        body {
-            padding: 20px;
-            background: #f5f5f5;
-        }
-
-        .comprobante {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.1);
-        }
-
-        .header {
-            text-align: center;
-            border-bottom: 3px solid #2c3e50;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-
-        .empresa-nombre {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-
-        .empresa-datos {
-            color: #7f8c8d;
-            font-size: 14px;
-            margin-bottom: 15px;
-        }
-
-        .titulo-comprobante {
-            font-size: 22px;
-            color: #3498db;
-            margin: 20px 0;
-            padding: 10px;
-            background: #ecf0f1;
-            border-radius: 5px;
-        }
-
-        .info-compra {
-            margin-bottom: 30px;
-        }
-
-        .info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, 1fr);
-            gap: 15px;
-            margin-bottom: 20px;
-        }
-
-        .info-item {
-            margin-bottom: 10px;
-        }
-
-        .info-label {
-            font-weight: bold;
-            color: #2c3e50;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .info-valor {
-            color: #34495e;
-            padding: 8px;
-            background: #f8f9fa;
-            border-radius: 4px;
-            border-left: 4px solid #3498db;
-        }
-
-        .tabla-detalles {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 25px 0;
-        }
-
-            .tabla-detalles th {
-                background: #2c3e50;
-                color: white;
-                padding: 12px;
-                text-align: left;
-                font-weight: bold;
-            }
-
-            .tabla-detalles td {
-                padding: 10px;
-                border-bottom: 1px solid #ddd;
-            }
-
-            .tabla-detalles tr:hover {
-                background: #f8f9fa;
-            }
-
-        .badge {
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .badge-producto {
-            background: #3498db;
-            color: white;
-        }
-
-        .badge-insumo {
-            background: #f39c12;
-            color: white;
-        }
-
-        .text-end {
-            text-align: right;
-        }
-
-        .text-center {
-            text-align: center;
-        }
-
-        .total-section {
-            background: #2c3e50;
-            color: white;
-            padding: 20px;
-            border-radius: 5px;
-            margin-top: 30px;
-        }
-
-        .total-label {
-            font-size: 18px;
-            font-weight: bold;
-        }
-
-        .total-monto {
-            font-size: 28px;
-            font-weight: bold;
-            color: #2ecc71;
-        }
-
-        .estado-badge {
-            display: inline-block;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-weight: bold;
-            font-size: 14px;
-        }
-
-        .estado-pendiente {
-            background: #f39c12;
-            color: white;
-        }
-
-        .estado-completada {
-            background: #27ae60;
-            color: white;
-        }
-
-        .estado-anulada {
-            background: #e74c3c;
-            color: white;
-        }
-
-        .footer {
-            margin-top: 40px;
-            padding-top: 20px;
-            border-top: 2px dashed #bdc3c7;
-            text-align: center;
-            color: #7f8c8d;
-            font-size: 12px;
-        }
-
-        /* Estilos para impresión */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #f5f5f5; padding: 20px; color: #222; font-family: 'Segoe UI', Tahoma, Arial, sans-serif; }
+        .doc { margin: 0 auto; background: #fff; }
+        .comprobante { max-width: 800px; padding: 30px; border-radius: 8px; box-shadow: 0 0 15px rgba(0,0,0,.1); }
+        .ticket { width: 80mm; padding: 4mm; font-family: 'Courier New', monospace; font-size: 12px; }
+        .centro { text-align: center; }
+        .derecha { text-align: right; }
+        .empresa { font-size: 22px; font-weight: bold; }
+        .ticket .empresa { font-size: 15px; }
+        .sub { color: #555; font-size: 13px; }
+        .ticket .sub { font-size: 11px; color: #000; }
+        .titulo { margin: 14px 0; padding: 8px; background: #ecf0f1; font-size: 18px; font-weight: bold; text-align: center; }
+        .ticket .titulo { background: none; padding: 0; margin: 6px 0; font-size: 13px; }
+        .sep { border-top: 1px dashed #000; margin: 6px 0; }
+        .datos { width: 100%; margin-bottom: 12px; }
+        .datos td { padding: 3px 0; vertical-align: top; }
+        .datos td.etq { font-weight: bold; width: 35%; }
+        .detalle { width: 100%; border-collapse: collapse; margin: 10px 0; }
+        .detalle th { text-align: left; border-bottom: 2px solid #2c3e50; padding: 6px 4px; }
+        .detalle td { border-bottom: 1px solid #ddd; padding: 6px 4px; }
+        .detalle .derecha { text-align: right; }
+        .ticket .detalle th, .ticket .detalle td { border-bottom: none; padding: 2px 0; }
+        .ticket .detalle th { border-bottom: 1px dashed #000; }
+        .total { font-size: 18px; font-weight: bold; text-align: right; margin-top: 8px; }
+        .ticket .total { font-size: 14px; }
+        .anulada { color: #c0392b; font-weight: bold; text-align: center; font-size: 16px; margin: 8px 0; }
+        .pie { margin-top: 18px; text-align: center; font-size: 12px; color: #555; }
+        .acciones { text-align: center; margin: 20px 0; }
+        .acciones button { padding: 8px 18px; margin: 0 4px; cursor: pointer; }
         @@media print {
-            body {
-                padding: 0;
-                background: white;
-            }
-
-            .comprobante {
-                max-width: 100%;
-                box-shadow: none;
-                padding: 15px;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            .header {
-                border-bottom: 2px solid #000;
-            }
-
-            .tabla-detalles th {
-                background: #000 !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-            }
-
-            .total-section {
-                background: #000 !important;
-                color: white !important;
-                -webkit-print-color-adjust: exact;
-            }
-
-            .total-monto {
-                color: #fff !important;
-            }
+            body { background: #fff; padding: 0; }
+            .comprobante { box-shadow: none; border-radius: 0; }
+            .acciones { display: none; }
+            @(esTicket ? Html.Raw("@page { size: 80mm auto; margin: 0; }") : Html.Raw("@page { margin: 15mm; }"))
         }
-
-        .botones-accion {
-            text-align: center;
-            margin-bottom: 20px;
-            padding: 15px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-
-        .btn-imprimir {
-            background: #3498db;
-            color: white;
-            border: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            margin: 0 10px;
-            transition: background 0.3s;
-        }
-
-            .btn-imprimir:hover {
-                background: #2980b9;
-            }
-
-        .btn-volver {
-            background: #7f8c8d;
-            color: white;
-            text-decoration: none;
-            padding: 12px 24px;
-            border-radius: 5px;
-            font-size: 16px;
-            margin: 0 10px;
-            display: inline-block;
-        }
-
-            .btn-volver:hover {
-                background: #636e72;
-            }
     </style>
 </head>
 <body>
-    <div class="botones-accion no-print">
-        <button class="btn-imprimir" onclick="window.print()">
-            <i class="fas fa-print"></i> Imprimir Comprobante
-        </button>
-        <a href="@Url.Action("Details", "Compra", new { id = Model.id_compra })" class="btn-volver">
-            <i class="fas fa-arrow-left"></i> Volver al Detalle
-        </a>
-    </div>
-
-    <div class="comprobante">
-        <!-- Encabezado con datos de la empresa -->
-        <div class="header">
-            <div class="empresa-nombre">@nombreEmpresa</div>
-            <div class="empresa-datos">
-                @direccionEmpresa | Tel: @telefonoEmpresa
-            </div>
-            <div class="titulo-comprobante">
-                <i class="fas fa-file-invoice-dollar"></i> COMPROBANTE DE COMPRA #@Model.id_compra
-            </div>
-        </div>
-
-        <!-- Información de la compra -->
-        <div class="info-compra">
-            <div class="info-grid">
-                <div class="info-item">
-                    <span class="info-label">Proveedor:</span>
-                    <div class="info-valor">
-                        @Model.NombreProveedor<br />
-                        <small>@Model.DocumentoProveedor</small>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Fecha de Compra:</span>
-                    <div class="info-valor">
-                        @Model.FechaCompra.ToString("dd/MM/yyyy")<br />
-                        <small>@Model.FechaCompra.ToString("hh:mm tt")</small>
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Estado:</span>
-                    <div class="info-valor">
-                        @if (Model.Estado == "PENDIENTE")
-                        {
-                            <span class="estado-badge estado-pendiente">PENDIENTE</span>
-                        }
-                        else if (Model.Estado == "COMPLETADA")
-                        {
-                            <span class="estado-badge estado-completada">COMPLETADA</span>
-                        }
-                        else if (Model.Estado == "ANULADA")
-                        {
-                            <span class="estado-badge estado-anulada">ANULADA</span>
-                        }
-                        else
-                        {
-                            <span class="estado-badge">@Model.Estado</span>
-                        }
-                    </div>
-                </div>
-                <div class="info-item">
-                    <span class="info-label">Registrado por:</span>
-                    <div class="info-valor">
-                        @Model.NombreUsuario<br />
-                        <small>@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</small>
-                    </div>
-                </div>
-            </div>
-
-            @if (!string.IsNullOrEmpty(Model.Referencia))
+    <div class="doc @(esTicket ? "ticket" : "comprobante")">
+        <div class="centro">
+            <div class="empresa">@nombreEmpresa</div>
+            @if (!string.IsNullOrWhiteSpace(Model.DireccionPolleria))
             {
-                <div class="info-item">
-                    <span class="info-label">Referencia:</span>
-                    <div class="info-valor">@Model.Referencia</div>
-                </div>
+                <div class="sub">@Model.DireccionPolleria</div>
             }
         </div>
 
-        <!-- Detalles de la compra -->
-        <h3 style="color: #2c3e50; margin-bottom: 15px;">
-            <i class="fas fa-list"></i> Detalles de la Compra
-        </h3>
+        @if (esTicket)
+        {
+            <div class="sep"></div>
+        }
+        <div class="titulo">@titulo.ToUpper() N° @Model.NumeroVenta</div>
 
-        <table class="tabla-detalles">
+        @if (Model.Estado == "ANULADA")
+        {
+            <div class="anulada">*** VENTA ANULADA ***</div>
+        }
+
+        <table class="datos">
+            <tr><td class="etq">Fecha:</td><td>@Model.Fecha_venta.ToString("dd/MM/yyyy") @Model.hora_venta.ToString(@"hh\:mm")</td></tr>
+            <tr><td class="etq">Cliente:</td><td>@(string.IsNullOrWhiteSpace(Model.NombreCliente) ? "Cliente General" : Model.NombreCliente)</td></tr>
+            @if (!esTicket && !string.IsNullOrWhiteSpace(Model.TelefonoCliente))
+            {
+                <tr><td class="etq">Teléfono:</td><td>@Model.TelefonoCliente</td></tr>
+            }
+            <tr><td class="etq">Atendido por:</td><td>@Model.NombreVendedor</td></tr>
+            <tr><td class="etq">Forma de pago:</td><td>@Model.TipoPago</td></tr>
+            @if (!string.IsNullOrWhiteSpace(Model.NombreTipoVenta))
+            {
+                <tr><td class="etq">Canal:</td><td>@Model.NombreTipoVenta</td></tr>
+            }
+        </table>
+
+        <table class="detalle">
             <thead>
                 <tr>
-                    <th width="5%">#</th>
-                    <th width="35%">Item</th>
-                    <th width="15%" class="text-center">Tipo</th>
-                    <th width="10%" class="text-center">Cantidad</th>
-                    <th width="15%" class="text-end">Precio Unit.</th>
-                    <th width="15%" class="text-end">Subtotal</th>
-                    <th width="5%" class="text-center">Medida</th>
+                    <th>Cant.</th>
+                    <th>Producto</th>
+                    @if (!esTicket)
+                    {
+                        <th class="derecha">P. Unit.</th>
+                    }
+                    <th class="derecha">Subtotal</th>
                 </tr>
             </thead>
             <tbody>
-                @if (Model.Detalles != null && Model.Detalles.Any())
-                {
-                    var contador = 1;
-                    foreach (var detalle in Model.Detalles)
-                    {
-                        <tr>
-                            <td class="text-center">@contador</td>
-                            <td>
-                                <strong>@detalle.NombreItem</strong>
-                                @if (!string.IsNullOrEmpty(detalle.DescripcionItem))
-                                {
-                                    <br />
-                                    <small style="color: #7f8c8d;">@detalle.DescripcionItem</small>
-                                }
-                            </td>
-                            <td class="text-center">
-                                @if (detalle.TipoItem == "PRODUCTO")
-                                {
-                                    <span class="badge badge-producto">PRODUCTO</span>
-                                }
-                                else
-                                {
-                                    <span class="badge badge-insumo">INSUMO</span>
-                                }
-                            </td>
-                            <td class="text-center">@detalle.cantidad</td>
-                            <td class="text-end">Bs. @detalle.precioUnitario.ToString("0.00")</td>
-                            <td class="text-end" style="font-weight: bold;">Bs. @detalle.subtotal.ToString("0.00")</td>
-                            <td class="text-center">
-                                <small style="background: #ecf0f1; padding: 3px 8px; border-radius: 3px;">
-                                    @detalle.MedidaItem
-                                </small>
-                            </td>
-                        </tr>
-                        contador++;
-                    }
-                }
-                else
+                @foreach (var d in Model.Detalles ?? new List<CapaModelo.CMDetalleVenta>())
                 {
                     <tr>
-                        <td colspan="7" class="text-center" style="padding: 20px; color: #7f8c8d;">
-                            No hay detalles registrados
+                        <td>@d.cantidad.ToString("0.##")</td>
+                        <td>
+                            @d.NombreProducto
+                            @if (esTicket)
+                            {
+                                <br /><small>@d.cantidad.ToString("0.##") x @d.precio_unitario.ToString("0.00")</small>
+                            }
                         </td>
+                        @if (!esTicket)
+                        {
+                            <td class="derecha">Bs. @d.precio_unitario.ToString("0.00")</td>
+                        }
+                        <td class="derecha">Bs. @d.subtotal.ToString("0.00")</td>
                     </tr>
                 }
             </tbody>
         </table>
 
-        <!-- Total -->
-        <div class="total-section">
-            <div style="display: flex; justify-content: space-between; align-items: center;">
-                <div class="total-label">TOTAL DE LA COMPRA:</div>
-                <div class="total-monto">Bs. @Model.MontoTotal.ToString("0.00")</div>
-            </div>
-        </div>
+        @if (esTicket)
+        {
+            <div class="sep"></div>
+        }
+        <div class="total">TOTAL: Bs. @Model.Total_venta.ToString("0.00")</div>
 
-        <!-- Pie de página (SIN QR) -->
-        <div class="footer">
-            <p>
-                <strong>Comprobante generado el:</strong> @fechaImpresion<br />
-                <strong>Código de comprobante:</strong> COMP-@Model.id_compra-@DateTime.Now.ToString("yyyyMMddHHmmss")<br />
-                <em>Este es un documento generado automáticamente por el sistema.</em>
-            </p>
-            <p style="margin-top: 10px;">
-                <i class="fas fa-info-circle"></i> Para consultas o aclaraciones, contactar al administrador del sistema.
-            </p>
+        <div class="pie">
+            <p>¡Gracias por su preferencia!</p>
+            <p>Este documento no es una factura.</p>
+            <p>Impreso: @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</p>
         </div>
     </div>
 
+    <div class="acciones">
+        <button type="button" onclick="window.print()">Imprimir</button>
+        <button type="button" onclick="window.close()">Cerrar</button>
+    </div>
+
     <script>
-        // Agregar Font Awesome para íconos
-        if (!document.querySelector('link[href*="font-awesome"]')) {
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.href = 'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css';
-            document.head.appendChild(link);
-        }
+        window.addEventListener('load', function () {
+            setTimeout(function () { window.print(); }, 300);
+        });
     </script>
 </body>
 </html>
