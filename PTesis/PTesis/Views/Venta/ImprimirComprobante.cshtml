@@ -47,7 +47,7 @@
             body { background: #fff; padding: 0; }
             .comprobante { box-shadow: none; border-radius: 0; }
             .acciones { display: none; }
-            @(esTicket ? Html.Raw("@page { size: 80mm auto; margin: 0; }") : Html.Raw("@page { margin: 15mm; }"))
+            @(esTicket ? Html.Raw("@page { size: 80mm 297mm; margin: 0; }") : Html.Raw("@page { margin: 15mm; }"))
         }
     </style>
 </head>
@@ -141,6 +141,13 @@
 
     <script>
         window.addEventListener('load', function () {
+            if (@(esTicket ? "true" : "false")) {
+                var doc = document.querySelector('.doc');
+                var altoMm = Math.ceil(doc.getBoundingClientRect().height * 25.4 / 96) + 10;
+                var estilo = document.createElement('style');
+                estilo.textContent = '@@media print { @@page { size: 80mm ' + altoMm + 'mm; margin: 0; } }';
+                document.head.appendChild(estilo);
+            }
             setTimeout(function () { window.print(); }, 300);
         });
     </script>
