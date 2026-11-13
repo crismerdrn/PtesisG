@@ -711,9 +711,9 @@ namespace CapaDatos
 
                     cmd.Parameters.AddWithValue("@fecha_hasta", fechaHasta ?? (object)DBNull.Value);
 
-                    cmd.Parameters.AddWithValue("@tipo_item", tipoItem ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@tipo_item", string.IsNullOrWhiteSpace(tipoItem) ? (object)DBNull.Value : tipoItem);
 
-                    cmd.Parameters.AddWithValue("@tipo_movimiento", tipoMovimiento ?? (object)DBNull.Value);
+                    cmd.Parameters.AddWithValue("@tipo_movimiento", string.IsNullOrWhiteSpace(tipoMovimiento) ? (object)DBNull.Value : tipoMovimiento);
 
                     cmd.Parameters.AddWithValue("@id_item", idItem ?? (object)DBNull.Value);
 

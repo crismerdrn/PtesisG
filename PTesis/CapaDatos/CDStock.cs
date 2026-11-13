@@ -718,6 +718,9 @@ namespace CapaDatos
 
         private void AddNullableParameter(SqlCommand cmd, string parameterName, object value)
         {
+            if (value is string texto && string.IsNullOrWhiteSpace(texto))
+                value = null;
+
             if (value != null)
                 cmd.Parameters.AddWithValue(parameterName, value);
             else
