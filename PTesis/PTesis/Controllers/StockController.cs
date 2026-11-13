@@ -230,7 +230,7 @@ namespace PTesis.Controllers
         }
 
         // GET: Stock/AjustarInsumo
-        public ActionResult AjustarInsumo(int id)
+        public ActionResult AjustarInsumo(int id = 0)
         {
             if (!TienePermiso("Stock_Ajustar"))
             {
@@ -245,7 +245,9 @@ namespace PTesis.Controllers
 
             if (stockInsumo == null)
             {
-                TempData["Error"] = "Registro de stock no encontrado.";
+                TempData["Error"] = id <= 0
+                    ? "Seleccione en la tabla el insumo que desea ajustar."
+                    : "Registro de stock no encontrado.";
                 return RedirectToAction("Insumos");
             }
 
