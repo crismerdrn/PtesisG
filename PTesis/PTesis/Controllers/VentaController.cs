@@ -412,6 +412,7 @@ namespace PTesis.Controllers
             ViewBag.IdPolleria = idPolleria;
             ViewBag.SoloConStock = soloConStock;
             ViewBag.PolleriaActiva = polleriaActiva;
+            ViewBag.PuedeAjustarStock = TienePermiso("Administrador");
 
             return View(stock);
         }
