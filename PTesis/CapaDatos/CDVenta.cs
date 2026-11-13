@@ -761,7 +761,7 @@ namespace CapaDatos
 
                                 observaciones = dr["observaciones"].ToString(),
 
-                                fecha_registro = Convert.ToDateTime(dr["fecha_registro"]),
+                                fecha_registro = Convert.ToDateTime(dr["fecha_movimiento"]),
 
                                 nombre_item = dr["item_nombre"].ToString(),
 

@@ -349,7 +349,7 @@ namespace CapaDatos
                                 observaciones = dr["observaciones"] != DBNull.Value ? dr["observaciones"].ToString() : "",
                                 id_polleria = Convert.ToInt32(dr["id_polleria"]),
                                 id_usuario = Convert.ToInt32(dr["id_usuario"]),
-                                fecha_registro = Convert.ToDateTime(dr["fecha_registro"]),
+                                fecha_registro = Convert.ToDateTime(dr["fecha_movimiento"]),
                                 nombre_item = dr["item_nombre"] != DBNull.Value
                 ? dr["item_nombre"].ToString()
                 : "Desconocido",
