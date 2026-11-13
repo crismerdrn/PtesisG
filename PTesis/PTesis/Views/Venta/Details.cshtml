@@ -13,6 +13,21 @@
         </div>
     }
 
+@if (TempData["ImprimirTicket"] != null)
+    {
+        <div class="alert alert-info d-flex flex-wrap justify-content-between align-items-center mt-3" role="alert">
+            <span><i class="fas fa-receipt me-2"></i>Venta registrada. Si el ticket no se abrió automáticamente, imprímalo aquí:</span>
+            <span>
+                <a href="@Url.Action("ImprimirComprobante", new { id = Model.id_venta, tipo = "TICKET" })" target="_blank" class="btn btn-sm btn-primary">
+                    <i class="fas fa-receipt me-1"></i> Imprimir Ticket
+                </a>
+                <a href="@Url.Action("ImprimirComprobante", new { id = Model.id_venta, tipo = "COMPROBANTE" })" target="_blank" class="btn btn-sm btn-outline-primary">
+                    <i class="fas fa-file-alt me-1"></i> Imprimir Comprobante
+                </a>
+            </span>
+        </div>
+    }
+
 <div class="d-flex justify-content-between align-items-center mt-4">
     <h2 class="fw-bold">
         <i class="fas fa-shopping-bag me-2 text-success"></i>
