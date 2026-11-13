@@ -167,7 +167,7 @@
                 <div class="d-flex justify-content-end gap-2">
                     @Html.ActionLink("Cancelar", "StockDisponible", null,
                         new { @class = "btn btn-secondary px-4" })
-                    <button type="submit" class="btn btn-warning px-4" onclick="return validarAjuste()">
+                    <button type="submit" class="btn btn-warning px-4" onclick="return validarAjuste(this)">
                         <i class="fas fa-save me-1"></i> Aplicar Ajuste
                     </button>
                 </div>
@@ -282,7 +282,7 @@
             calcularDiferencia();
         }
 
-        function validarAjuste() {
+        function validarAjuste(boton) {
             const motivo = $('textarea[name="Motivo"]').val().trim();
             const nuevoStock = parseFloat($('#NuevoStock').val()) || 0;
             const stockActual = parseFloat($('#stockActualInfo').text()) || 0;
@@ -314,9 +314,11 @@
             }
 
             // Mostrar loading
-            $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+            const form = boton.form;
+            $(boton).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+            form.submit();
 
-            return true;
+            return false;
         }
     </script>
 }

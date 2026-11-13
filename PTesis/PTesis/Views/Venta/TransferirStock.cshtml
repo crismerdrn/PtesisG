@@ -151,7 +151,7 @@ new
                 <div class="d-flex justify-content-end gap-2">
                     @Html.ActionLink("Cancelar", "StockDisponible", null,
                         new { @class = "btn btn-secondary px-4" })
-                    <button type="submit" class="btn btn-info px-4" onclick="return validarTransferencia()">
+                    <button type="submit" class="btn btn-info px-4" onclick="return validarTransferencia(this)">
                         <i class="fas fa-exchange-alt me-1"></i> Realizar Transferencia
                     </button>
                 </div>
@@ -280,7 +280,7 @@ new
             actualizarResumen();
         }
 
-        function validarTransferencia() {
+        function validarTransferencia(boton) {
             const idProducto = $('#ProductoSelect').val();
             const idOrigen = $('#PolleriaOrigenSelect').val();
             const idDestino = $('#PolleriaDestinoSelect').val();
@@ -337,9 +337,11 @@ new
             }
 
             // Mostrar loading
-            $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+            const form = boton.form;
+            $(boton).prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+            form.submit();
 
-            return true;
+            return false;
         }
     </script>
 }
