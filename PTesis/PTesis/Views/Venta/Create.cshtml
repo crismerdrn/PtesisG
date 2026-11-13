@@ -185,6 +185,18 @@
         let detalles = [];
 
         $(document).ready(function () {
+            if (@(Request.HttpMethod == "POST" ? "true" : "false")) {
+                try {
+                    detalles = JSON.parse(sessionStorage.getItem('ventaDetalles') || '[]');
+                } catch (e) {
+                    detalles = [];
+                }
+                renderizarTabla();
+                actualizarTotal();
+            } else {
+                sessionStorage.removeItem('ventaDetalles');
+            }
+
             // Buscador con debounce
             let debounceTimer;
             $('#buscadorProducto').on('input', function () {
@@ -453,6 +465,7 @@
             }));
 
             $('#detallesJson').val(JSON.stringify(dataFinal));
+            sessionStorage.setItem('ventaDetalles', JSON.stringify(detalles));
             $('#btnRegistrarVenta').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Registrando...');
             return true;
         });

@@ -322,9 +322,7 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Obtener venta (ajustar según tu método existente)
-            // var venta = cdVenta.ObtenerDetallesVentaConSP(id);
-            var venta = new CMVenta(); // Reemplazar con tu método real
+            var venta = cdVenta.ObtenerDetallesVenta(id);
 
             if (venta == null)
             {
