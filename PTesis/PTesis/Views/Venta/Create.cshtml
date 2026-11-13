@@ -315,8 +315,8 @@
                                    style="max-width: 90px;"
                                    min="1" step="1"
                                    value="${d.cantidad}"
-                                   onchange="actualizarCantidad(${idx}, this.value)"
-                                   onkeyup="actualizarCantidad(${idx}, this.value)" />
+                                   onchange="actualizarCantidad(${idx}, this.value, true)"
+                                   oninput="actualizarCantidad(${idx}, this.value, false)" />
                         </td>
                         <td class="text-center">
                             <span class="badge bg-secondary-subtle text-secondary border">
@@ -324,7 +324,7 @@
                             </span>
                         </td>
                         <td class="text-end">Bs. ${d.precioUnitario.toFixed(2)}</td>
-                        <td class="text-end fw-bold text-success">Bs. ${d.subtotal.toFixed(2)}</td>
+                        <td class="text-end fw-bold text-success" id="subtotalDetalle_${idx}">Bs. ${d.subtotal.toFixed(2)}</td>
                         <td class="text-center">
                             <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarDetalle(${idx})">
                                 <i class="fas fa-times"></i>
@@ -336,14 +336,21 @@
             });
         }
 
-        function actualizarCantidad(idx, valor) {
+        function actualizarCantidad(idx, valor, rerender) {
             let cant = parseFloat(valor) || 0;
-            if (cant < 1) cant = 1;
+            if (cant < 1) {
+                if (!rerender) return;
+                cant = 1;
+            }
 
             detalles[idx].cantidad = cant;
             detalles[idx].subtotal = cant * detalles[idx].precioUnitario;
 
-            renderizarTabla();
+            if (rerender) {
+                renderizarTabla();
+            } else {
+                $('#subtotalDetalle_' + idx).text(`Bs. ${detalles[idx].subtotal.toFixed(2)}`);
+            }
             actualizarTotal();
         }
 

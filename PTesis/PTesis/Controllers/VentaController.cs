@@ -61,9 +61,7 @@ namespace PTesis.Controllers
 
             int? idPolleria = polleriaActual?.id_polleria;
 
-            // Obtener lista de ventas (ajustar según tus métodos existentes)
-            // var lista = cdVenta.ListarVentas(estado, fechaInicio, fechaFin, idCliente, idUsuarioFiltro, idPolleria);
-            var lista = new List<CMVenta>(); // Reemplazar con tu método real
+            var lista = cdVenta.ListarVentas(estado, fechaInicio, fechaFin, idCliente, idUsuarioFiltro, null);
 
             // Filtro de búsqueda
             if (!string.IsNullOrEmpty(buscar))
