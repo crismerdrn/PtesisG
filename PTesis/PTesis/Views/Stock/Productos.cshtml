@@ -16,14 +16,15 @@
                 @Html.ActionLink("Stock Bajo", "StockBajo", "Stock", new { tipo = "productos" }, new { @class = "btn btn-outline-warning" })
             </div>
         </div>
-        @*<div class="col-md-4 text-end">
+        <div class="col-md-4 text-end">
+            @Html.ActionLink("Historial", "Historial", "Stock", null, new { @class = "btn btn-outline-info shadow-sm" })
             @if (ViewBag.PuedeAjustar)
             {
-                <a href="@Url.Action("AjustarProducto", "Stock")" class="btn btn-danger shadow-sm">
-                    <i class="fas fa-adjust me-1"></i> Ajustar Stock
+                <a href="@Url.Action("Transferir", "Stock")" class="btn btn-danger shadow-sm ms-1">
+                    <i class="fas fa-exchange-alt me-1"></i> Transferir Stock
                 </a>
             }
-        </div>*@
+        </div>
     </div>
 
     @if (TempData["SuccessMessage"] != null)
@@ -181,7 +182,7 @@
                                 <span class="badge bg-info">S/ @stock.precio_venta.ToString("N2")</span>
                             </td>
                             <td class="text-center">
-                                @*<div class="btn-group">
+                                <div class="btn-group">
                                     <a href="@Url.Action("AjustarProducto", "Stock", new { id = stock.id_stock })"
                                        class="btn btn-sm btn-outline-primary" title="Ajustar Stock">
                                         <i class="fas fa-adjust"></i>
@@ -200,7 +201,7 @@
                                        class="btn btn-sm btn-outline-warning ms-1" title="Configurar Mínimo">
                                         <i class="fas fa-cog"></i>
                                     </a>
-                                </div>*@
+                                </div>
                             </td>
                         </tr>
                     }
