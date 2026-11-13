@@ -58,13 +58,6 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index");
             }
 
-            // Verificar si ya existe una pollería activa
-            var polleriasActivas = cdPolleria.Listar().Where(p => p.Estado).Count();
-            if (polleriasActivas > 0)
-            {
-                ViewBag.InfoMessage = "Ya existe una pollería activa en el sistema. Solo se permite una activa a la vez.";
-            }
-
             return View(new CMPolleria { Estado = true });
         }
 
@@ -237,14 +230,6 @@ namespace PTesis.Controllers
                 {
                     TempData["Error"] = "Polleria no encontrada.";
                     return RedirectToAction("Index");
-                }
-
-                // Verificar si ya existe una pollería activa
-                var polleriasActivas = cdPolleria.Listar().Where(p => p.Estado && p.id_polleria != id).Count();
-                if (polleriasActivas > 0)
-                {
-                    TempData["Error"] = "Ya existe una pollería activa en el sistema. Solo se permite una activa.";
-                    return RedirectToAction("Index", new { estado = false });
                 }
 
                 polleria.Estado = true;

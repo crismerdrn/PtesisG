@@ -80,23 +80,6 @@ namespace PTesis.Controllers
             }
         }
 
-        private CMPolleria ObtenerPolleriaActiva()
-        {
-            try
-            {
-                using (var conexion = new SqlConnection(Conexion.CN))
-                {
-                    conexion.Open();
-                    string query = "SELECT TOP 1 id_polleria, nombre FROM POLLERIA WHERE estado = 1 ORDER BY id_polleria";
-                    var polleria = conexion.QueryFirstOrDefault<CMPolleria>(query);
-                    if (polleria != null) return polleria;
-                }
-            }
-            catch { }
-
-            // Fallback por defecto si no hay conexión temporal
-            return new CMPolleria { id_polleria = 5, Nombre = "El Escondite del Loro" };
-        }
 
         #endregion
     }

@@ -46,6 +46,25 @@ namespace CapaModelo
         public decimal? StockActual { get; set; }
         public decimal? StockMinimo { get; set; }
 
+        /// <summary>
+        /// Consumo por unidad vendida tal como lo descuenta sp_Venta_RegistrarConStock:
+        /// en insumos medidos en kg o lts, una cantidad de 1 o más se interpreta en gramos o mililitros.
+        /// </summary>
+        public string ConsumoPorUnidad
+        {
+            get
+            {
+                string abrev = (AbreviaturaMedida ?? "").Trim();
+                string abrevMin = abrev.ToLowerInvariant();
+                if ((abrevMin == "kg" || abrevMin == "lts") && cantidad_requerida >= 1)
+                {
+                    string menor = abrevMin == "kg" ? "gr" : "ml";
+                    return $"{cantidad_requerida:0.####} {menor} = {cantidad_requerida / 1000m:0.####} {abrev}";
+                }
+                return $"{cantidad_requerida:0.####} {(string.IsNullOrEmpty(abrev) ? MedidaInsumo : abrev)}";
+            }
+        }
+
         // Constructor para inicializar propiedades
         public CMInsumoProducto()
         {

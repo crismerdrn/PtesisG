@@ -1,4 +1,7 @@
-﻿using System.Web.Mvc;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Web.Mvc;
+using CapaDatos;
 using CapaModelo;
 
 namespace PTesis.Controllers
@@ -80,6 +83,59 @@ namespace PTesis.Controllers
                 return true;
 
             return UsuarioSesion.PuedeEliminar(modulo);
+        }
+
+        private const string ClavePolleriaTrabajo = "IdPolleriaTrabajo";
+        private List<CMPolleria> polleriasActivas;
+
+        protected List<CMPolleria> ObtenerPolleriasActivas()
+        {
+            if (polleriasActivas == null)
+            {
+                try
+                {
+                    polleriasActivas = new CDPolleria().Listar()
+                        .Where(p => p.Estado)
+                        .OrderBy(p => p.id_polleria)
+                        .ToList();
+                }
+                catch
+                {
+                    polleriasActivas = new List<CMPolleria>();
+                }
+            }
+            return polleriasActivas;
+        }
+
+        /// <summary>
+        /// Pollería (sucursal) en la que trabaja el usuario: la elegida en el menú superior,
+        /// o la primera activa si no eligió ninguna.
+        /// </summary>
+        protected CMPolleria ObtenerPolleriaActiva()
+        {
+            var activas = ObtenerPolleriasActivas();
+            var idSeleccionada = Session?[ClavePolleriaTrabajo] as int?;
+            return activas.FirstOrDefault(p => p.id_polleria == idSeleccionada) ?? activas.FirstOrDefault();
+        }
+
+        protected bool EsPolleriaActiva(int idPolleria)
+        {
+            return ObtenerPolleriasActivas().Any(p => p.id_polleria == idPolleria);
+        }
+
+        protected void SeleccionarPolleriaTrabajo(int idPolleria)
+        {
+            Session[ClavePolleriaTrabajo] = idPolleria;
+        }
+
+        protected override void OnResultExecuting(ResultExecutingContext filterContext)
+        {
+            if (filterContext.Result is ViewResult && UsuarioSesion != null)
+            {
+                ViewBag.PolleriasTrabajo = ObtenerPolleriasActivas();
+                ViewBag.PolleriaTrabajo = ObtenerPolleriaActiva();
+            }
+            base.OnResultExecuting(filterContext);
         }
 
         protected override void OnActionExecuting(ActionExecutingContext filterContext)
