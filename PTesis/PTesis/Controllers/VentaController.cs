@@ -264,6 +264,7 @@ namespace PTesis.Controllers
                 if (respuesta.Resultado)
                 {
                     TempData["Exito"] = respuesta.Mensaje;
+                    TempData["ImprimirTicket"] = true;
                     return RedirectToAction("Details", new { id = respuesta.IdVentaGenerada });
                 }
                 else
@@ -313,6 +314,29 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index");
             }
         }
+        // GET: Venta/ImprimirComprobante/id?tipo=TICKET|COMPROBANTE
+        public ActionResult ImprimirComprobante(int id, string tipo = "COMPROBANTE")
+        {
+            if (!TienePermiso("Ventas"))
+            {
+                TempData["Error"] = "No tiene permisos para imprimir comprobantes de Ventas.";
+                return RedirectToAction("Index");
+            }
+
+            var venta = cdVenta.ObtenerDetallesVenta(id);
+            if (venta == null)
+            {
+                TempData["Error"] = $"No se encontró la venta con ID {id}.";
+                return RedirectToAction("Index");
+            }
+
+            if (venta.Detalles == null)
+                venta.Detalles = new List<CMDetalleVenta>();
+
+            ViewBag.Tipo = string.Equals(tipo, "TICKET", StringComparison.OrdinalIgnoreCase) ? "TICKET" : "COMPROBANTE";
+            return View(venta);
+        }
+
         // GET: Venta/Anular/id
         public ActionResult Anular(int id)
         {
