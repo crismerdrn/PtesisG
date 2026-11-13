@@ -550,7 +550,7 @@ namespace CapaDatos
             {
                 using (SqlConnection cn = new SqlConnection(Conexion.CN))
                 {
-                    string query = "SELECT COUNT(1) FROM COMPRAS WHERE id_proveedor = @id_proveedor";
+                    string query = "SELECT COUNT(1) FROM COMPRA WHERE PROVEEDOR_id_proveedor = @id_proveedor";
                     SqlCommand cmd = new SqlCommand(query, cn);
                     cmd.Parameters.AddWithValue("@id_proveedor", idProveedor);
 

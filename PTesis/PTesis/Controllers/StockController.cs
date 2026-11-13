@@ -211,7 +211,8 @@ namespace PTesis.Controllers
                 }
 
                 // Recargar datos para mostrar si hay error
-                var stock = cdStock.ObtenerStockProductoPorId(ajuste.id_item);
+                var stock = cdStock.ListarStockProductos(ajuste.id_polleria)
+                    .FirstOrDefault(x => x.PRODUCTO_id_producto == ajuste.id_item);
                 if (stock != null)
                 {
                     ajuste.item_nombre = stock.producto_nombre;
@@ -323,10 +324,11 @@ namespace PTesis.Controllers
             DateTime? fechaDesde = null;
             DateTime? fechaHasta = null;
 
-            if (!string.IsNullOrEmpty(fecha_desde))
-                fechaDesde = DateTime.Parse(fecha_desde);
-            if (!string.IsNullOrEmpty(fecha_hasta))
-                fechaHasta = DateTime.Parse(fecha_hasta);
+            DateTime fechaTmp;
+            if (!string.IsNullOrEmpty(fecha_desde) && DateTime.TryParse(fecha_desde, out fechaTmp))
+                fechaDesde = fechaTmp;
+            if (!string.IsNullOrEmpty(fecha_hasta) && DateTime.TryParse(fecha_hasta, out fechaTmp))
+                fechaHasta = fechaTmp;
 
             var historial = cdStock.ObtenerHistorialMovimientos(
                 id_polleria, fechaDesde, fechaHasta, tipo_item, tipo_movimiento, id_item);
@@ -380,10 +382,11 @@ namespace PTesis.Controllers
             DateTime? fechaDesde = null;
             DateTime? fechaHasta = null;
 
-            if (!string.IsNullOrEmpty(fecha_desde))
-                fechaDesde = DateTime.Parse(fecha_desde);
-            if (!string.IsNullOrEmpty(fecha_hasta))
-                fechaHasta = DateTime.Parse(fecha_hasta);
+            DateTime fechaTmp;
+            if (!string.IsNullOrEmpty(fecha_desde) && DateTime.TryParse(fecha_desde, out fechaTmp))
+                fechaDesde = fechaTmp;
+            if (!string.IsNullOrEmpty(fecha_hasta) && DateTime.TryParse(fecha_hasta, out fechaTmp))
+                fechaHasta = fechaTmp;
 
             var kardex = cdStock.ObtenerKardexProducto(id_producto, id_polleria, fechaDesde, fechaHasta);
 
@@ -434,12 +437,28 @@ namespace PTesis.Controllers
                     return RedirectToAction("Productos");
                 }
 
-                return View(stock);
+                ViewBag.ItemNombre = stock.producto_nombre;
+                ViewBag.PolleriaNombre = stock.polleria_nombre;
+                ViewBag.Abreviatura = stock.abreviatura;
+                ViewBag.StockActual = stock.stock_actual;
+                ViewBag.StockMinimo = stock.stock_minimo;
+                return View();
             }
             else
             {
-                // Similar para insumos
-                return RedirectToAction("Insumos");
+                var stockInsumo = cdStock.ListarStockInsumos().FirstOrDefault(x => x.id_stock_insumo == id);
+                if (stockInsumo == null)
+                {
+                    TempData["Error"] = "Registro de stock no encontrado.";
+                    return RedirectToAction("Insumos");
+                }
+
+                ViewBag.ItemNombre = stockInsumo.insumo_nombre;
+                ViewBag.PolleriaNombre = stockInsumo.polleria_nombre;
+                ViewBag.Abreviatura = stockInsumo.abreviatura;
+                ViewBag.StockActual = stockInsumo.stock_actual;
+                ViewBag.StockMinimo = stockInsumo.stock_minimo;
+                return View();
             }
         }
 
@@ -454,6 +473,12 @@ namespace PTesis.Controllers
                 {
                     TempData["Error"] = "No tiene permisos para configurar stock mínimo.";
                     return RedirectToAction(tipo == "producto" ? "Productos" : "Insumos");
+                }
+
+                if (stock_minimo < 0)
+                {
+                    TempData["Error"] = "El stock mínimo no puede ser negativo.";
+                    return RedirectToAction("ConfigurarMinimo", new { id, tipo });
                 }
 
                 string mensaje = string.Empty;
@@ -475,8 +500,21 @@ namespace PTesis.Controllers
                 }
                 else
                 {
-                    // Para insumos
-                    // Implementar similar al de productos
+                    var stockInsumo = cdStock.ListarStockInsumos().FirstOrDefault(x => x.id_stock_insumo == id);
+                    if (stockInsumo != null)
+                    {
+                        resultado = cdStock.ActualizarStockMinimoInsumo(
+                            stockInsumo.INSUMO_id_insumo,
+                            stockInsumo.POLLERIA_id_polleria,
+                            stock_minimo,
+                            usuarioId,
+                            out mensaje);
+                    }
+                }
+
+                if (!resultado && string.IsNullOrEmpty(mensaje))
+                {
+                    mensaje = "Registro de stock no encontrado.";
                 }
 
                 if (resultado)
@@ -506,7 +544,7 @@ namespace PTesis.Controllers
                 return RedirectToAction("Productos");
             }
 
-            var transferencia = new CMTransfersVentaStock();
+            var transferencia = new CMStockTransferVenta();
 
             // Obtener productos
             var cdProducto = new CDProducto();
@@ -544,38 +582,40 @@ namespace PTesis.Controllers
 
                 if (ModelState.IsValid)
                 {
-                    // Validar que origen y destino sean diferentes
-                    if (transferencia.id_polleria_origen == transferencia.id_polleria_destino)
-                    {
-                        TempData["Error"] = "La pollería origen y destino no pueden ser la misma.";
-                        return View(transferencia);
-                    }
-
-                    // Validar stock disponible
                     decimal stockDisponible = cdStock.ObtenerStockDisponibleProducto(
                         transferencia.id_producto, transferencia.id_polleria_origen);
 
-                    if (stockDisponible < transferencia.cantidad)
+                    if (transferencia.id_polleria_origen == transferencia.id_polleria_destino)
+                    {
+                        TempData["Error"] = "La pollería origen y destino no pueden ser la misma.";
+                    }
+                    else if (transferencia.cantidad <= 0)
+                    {
+                        TempData["Error"] = "La cantidad debe ser mayor a 0.";
+                    }
+                    else if (stockDisponible < transferencia.cantidad)
                     {
                         TempData["Error"] = $"Stock insuficiente. Disponible: {stockDisponible}";
-                        return View(transferencia);
-                    }
-
-                    // Obtener usuario actual
-                    transferencia.id_usuario = ObtenerUsuarioId();
-
-                    string mensaje = string.Empty;
-                    bool resultado = cdStock.TransferirStockEntrePollerias(transferencia, out mensaje);
-
-                    if (resultado)
-                    {
-                        TempData["Exito"] = mensaje;
-                        return RedirectToAction("Productos");
                     }
                     else
                     {
+                        transferencia.id_usuario = ObtenerUsuarioId();
+
+                        string mensaje = string.Empty;
+                        bool resultado = cdStock.TransferirStockEntrePollerias(transferencia, out mensaje);
+
+                        if (resultado)
+                        {
+                            TempData["Exito"] = mensaje;
+                            return RedirectToAction("Productos");
+                        }
+
                         TempData["Error"] = mensaje;
                     }
+                }
+                else
+                {
+                    TempData["Error"] = "Complete correctamente todos los campos requeridos.";
                 }
 
                 // Recargar datos para el dropdown en caso de error

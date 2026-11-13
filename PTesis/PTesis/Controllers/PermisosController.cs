@@ -9,6 +9,11 @@ namespace PTesis.Controllers
 {
     public class PermisosController : BaseController
     {
+        protected override string[] PermisosModulo
+        {
+            get { return new[] { "Permisos" }; }
+        }
+
         private CDPermiso datos = new CDPermiso();
         private CDRol datosRol = new CDRol();
 

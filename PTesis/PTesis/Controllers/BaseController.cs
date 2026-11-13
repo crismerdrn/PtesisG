@@ -19,6 +19,14 @@ namespace PTesis.Controllers
         /// Valida si el usuario tiene el permiso directo o alguna de sus acciones asociadas.
         /// No requiere cambiar llamadas existentes como TienePermiso("Clientes").
         /// </summary>
+        /// <summary>
+        /// Permisos que habilitan el acceso al controlador completo (basta con uno).
+        /// </summary>
+        protected virtual string[] PermisosModulo
+        {
+            get { return null; }
+        }
+
         protected bool TienePermiso(string nombreMenu)
         {
             if (UsuarioSesion == null) return false;
@@ -79,6 +87,15 @@ namespace PTesis.Controllers
             if (UsuarioSesion == null && !(filterContext.Controller is LoginController))
             {
                 filterContext.Result = RedirectToAction("Index", "Login");
+                return;
+            }
+
+            var permisosModulo = PermisosModulo;
+            if (UsuarioSesion != null && permisosModulo != null && permisosModulo.Length > 0 &&
+                !System.Linq.Enumerable.Any(permisosModulo, TienePermiso))
+            {
+                TempData["Error"] = "No tiene permisos para acceder a este módulo.";
+                filterContext.Result = RedirectToAction("Index", "Home");
                 return;
             }
 

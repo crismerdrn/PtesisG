@@ -272,7 +272,7 @@ namespace PTesis.Controllers
                     return RedirectToAction("Index");
                 }
 
-                return View(usuario);
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {

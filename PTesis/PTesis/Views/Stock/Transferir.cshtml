@@ -1,0 +1,89 @@
+@model CapaModelo.CMStockTransferVenta
+@{
+    ViewBag.Title = "Transferir Stock";
+    var productos = ViewBag.Productos as List<SelectListItem> ?? new List<SelectListItem>();
+    var pollerias = ViewBag.Pollerias as List<SelectListItem> ?? new List<SelectListItem>();
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-exchange-alt me-2 text-primary"></i>Transferir Stock entre Pollerías</h2>
+        <p class="text-muted">Mueva stock de un producto de una pollería a otra</p>
+    </div>
+
+    @using (Html.BeginForm("Transferir", "Stock", FormMethod.Post, new { id = "formTransferir" }))
+    {
+        @Html.AntiForgeryToken()
+
+        <div class="card shadow-sm border-0 mb-4" style="max-width: 820px;">
+            <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Producto: <span class="text-danger">*</span></label>
+                    @Html.DropDownListFor(m => m.id_producto, new SelectList(productos, "Value", "Text", Model?.id_producto), "-- Seleccione --", new { @class = "form-select", required = "required", id = "id_producto" })
+                </div>
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Pollería origen: <span class="text-danger">*</span></label>
+                        @Html.DropDownListFor(m => m.id_polleria_origen, new SelectList(pollerias, "Value", "Text", Model?.id_polleria_origen), "-- Seleccione --", new { @class = "form-select", required = "required", id = "id_polleria_origen" })
+                        <small class="text-muted">Disponible: <span id="stockDisponible">-</span></small>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Pollería destino: <span class="text-danger">*</span></label>
+                        @Html.DropDownListFor(m => m.id_polleria_destino, new SelectList(pollerias, "Value", "Text", Model?.id_polleria_destino), "-- Seleccione --", new { @class = "form-select", required = "required", id = "id_polleria_destino" })
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Cantidad: <span class="text-danger">*</span></label>
+                    @Html.TextBoxFor(m => m.cantidad, new { @class = "form-control", type = "number", min = "0.01", step = "0.01", required = "required", id = "cantidad" })
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Observaciones:</label>
+                    @Html.TextAreaFor(m => m.observaciones, new { @class = "form-control", rows = "3", maxlength = "500" })
+                </div>
+                <div id="erroresTransferencia" class="alert alert-danger d-none"></div>
+            </div>
+            <div class="card-footer bg-white d-flex justify-content-end gap-2">
+                <a href="@Url.Action("Productos", "Stock")" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Cancelar</a>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-exchange-alt me-1"></i>Transferir</button>
+            </div>
+        </div>
+    }
+</div>
+
+@section JavaScript {
+    <script>
+        (function () {
+            var disponible = null;
+
+            function actualizarStock() {
+                var prod = $('#id_producto').val(), orig = $('#id_polleria_origen').val();
+                disponible = null;
+                $('#stockDisponible').text('-');
+                if (!prod || !orig) return;
+                $.getJSON('@Url.Action("ObtenerStockProducto", "Stock")', { id_producto: prod, id_polleria: orig }, function (r) {
+                    if (r && r.stock !== undefined) {
+                        disponible = parseFloat(r.stock);
+                        $('#stockDisponible').text(disponible.toFixed(2));
+                    }
+                });
+            }
+
+            $('#id_producto, #id_polleria_origen').on('change', actualizarStock);
+            actualizarStock();
+
+            $('#formTransferir').on('submit', function (e) {
+                var errores = [];
+                var cant = parseFloat($('#cantidad').val());
+                if (!$('#id_producto').val()) errores.push('Seleccione un producto.');
+                if (!$('#id_polleria_origen').val() || !$('#id_polleria_destino').val()) errores.push('Seleccione la pollería de origen y destino.');
+                if ($('#id_polleria_origen').val() && $('#id_polleria_origen').val() === $('#id_polleria_destino').val()) errores.push('La pollería origen y destino no pueden ser la misma.');
+                if (isNaN(cant) || cant <= 0) errores.push('La cantidad debe ser mayor a 0.');
+                if (disponible !== null && cant > disponible) errores.push('Stock insuficiente. Disponible: ' + disponible.toFixed(2));
+                if (errores.length) {
+                    e.preventDefault();
+                    $('#erroresTransferencia').html(errores.join('<br>')).removeClass('d-none');
+                }
+            });
+        })();
+    </script>
+}

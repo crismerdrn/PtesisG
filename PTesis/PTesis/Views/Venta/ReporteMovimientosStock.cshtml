@@ -1,0 +1,119 @@
+@model List<CapaModelo.CMMovimientoStock>
+@{
+    ViewBag.Title = "Reporte de Movimientos de Stock";
+    var movimientos = Model ?? new List<CapaModelo.CMMovimientoStock>();
+    var pollerias = ViewBag.ListaPollerias as SelectList;
+    var tiposItem = ViewBag.ListaTiposItem as SelectList;
+    var tiposMovimiento = ViewBag.ListaTiposMovimiento as SelectList;
+    string idPolleriaSel = ViewBag.IdPolleria == null ? "" : ViewBag.IdPolleria.ToString();
+    string tipoItemSel = ViewBag.TipoItem as string ?? "";
+    string tipoMovSel = ViewBag.TipoMovimiento as string ?? "";
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4 mb-3">
+        <h2 class="fw-bold"><i class="fas fa-chart-line me-2 text-primary"></i>Reporte de Movimientos de Stock</h2>
+        <p class="text-muted">Por defecto se muestran los últimos 30 días</p>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            @using (Html.BeginForm("ReporteMovimientosStock", "Venta", FormMethod.Get, new { @class = "row g-3 align-items-end" }))
+            {
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Pollería</label>
+                    <select name="idPolleria" class="form-select">
+                        <option value="">Todas</option>
+                        @if (pollerias != null)
+                        {
+                            foreach (var p in pollerias.Where(x => !string.IsNullOrEmpty(x.Value)))
+                            {
+                                <option value="@p.Value" selected="@(p.Value == idPolleriaSel)">@p.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Tipo de ítem</label>
+                    <select name="tipoItem" class="form-select">
+                        @if (tiposItem != null)
+                        {
+                            foreach (var t in tiposItem)
+                            {
+                                <option value="@t.Value" selected="@(t.Value == tipoItemSel)">@t.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Movimiento</label>
+                    <select name="tipoMovimiento" class="form-select">
+                        @if (tiposMovimiento != null)
+                        {
+                            foreach (var t in tiposMovimiento)
+                            {
+                                <option value="@t.Value" selected="@(t.Value == tipoMovSel)">@t.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Desde</label>
+                    <input type="date" name="fechaDesde" class="form-control" value="@ViewBag.FechaDesde" />
+                </div>
+                <div class="col-md-2">
+                    <label class="form-label fw-bold">Hasta</label>
+                    <input type="date" name="fechaHasta" class="form-control" value="@ViewBag.FechaHasta" />
+                </div>
+                <div class="col-md-1 d-grid">
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-filter"></i></button>
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            @if (!movimientos.Any())
+            {
+                <div class="alert alert-info mb-0"><i class="fas fa-info-circle me-2"></i>No se encontraron movimientos con los filtros seleccionados.</div>
+            }
+            else
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover table-sm align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Fecha</th>
+                                <th>Movimiento</th>
+                                <th>Ítem</th>
+                                <th>Tipo</th>
+                                <th>Pollería</th>
+                                <th class="text-end">Cantidad</th>
+                                <th class="text-end">Stock anterior</th>
+                                <th class="text-end">Stock nuevo</th>
+                                <th>Usuario</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var m in movimientos)
+                            {
+                                <tr>
+                                    <td>@m.fecha_movimiento.ToString("dd/MM/yyyy HH:mm")</td>
+                                    <td><span class="badge bg-secondary">@m.tipo_movimiento</span></td>
+                                    <td>@m.nombre_item</td>
+                                    <td>@m.tipo_item</td>
+                                    <td>@m.nombre_polleria</td>
+                                    <td class="text-end">@m.cantidad.ToString("N2")</td>
+                                    <td class="text-end">@m.stock_anterior.ToString("N2")</td>
+                                    <td class="text-end fw-bold">@m.stock_nuevo.ToString("N2")</td>
+                                    <td>@m.nombre_usuario</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+        </div>
+    </div>
+</div>

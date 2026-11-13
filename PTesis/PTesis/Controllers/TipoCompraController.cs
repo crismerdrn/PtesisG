@@ -10,6 +10,11 @@ namespace PTesis.Controllers
 {
     public class TipoCompraController : BaseController
     {
+        protected override string[] PermisosModulo
+        {
+            get { return new[] { "Tipo de Compra", "TipoCompra" }; }
+        }
+
         private CDTipoCompra cdTipoCompra = new CDTipoCompra();
 
         public ActionResult Index(string buscar = "")

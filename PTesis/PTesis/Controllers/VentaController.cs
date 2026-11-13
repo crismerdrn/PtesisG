@@ -956,12 +956,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                // Implementar según tu capa de datos
-                var pollerias = new List<CMPolleria>
-                {
-                    new CMPolleria { id_polleria = 1, Nombre = "Polleria 1" },
-                    new CMPolleria { id_polleria = 2, Nombre = "Polleria 2" }
-                };
+                var pollerias = new CDPolleria().Listar();
                 return new SelectList(pollerias, "id_polleria", "Nombre");
             }
             catch

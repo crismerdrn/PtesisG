@@ -8,6 +8,11 @@ namespace PTesis.Controllers
 {
     public class RolController : BaseController
     {
+        protected override string[] PermisosModulo
+        {
+            get { return new[] { "Roles" }; }
+        }
+
         private CDRol datos = new CDRol();
 
         public ActionResult Index(string buscar)
@@ -165,9 +170,9 @@ namespace PTesis.Controllers
                 if (rol == null)
                 {
                     TempData["Error"] = "Rol no encontrado";
-                    return HttpNotFound();
+                    return RedirectToAction("Index");
                 }
-                return View(rol);
+                return RedirectToAction("Index");
             }
             catch (Exception ex)
             {
