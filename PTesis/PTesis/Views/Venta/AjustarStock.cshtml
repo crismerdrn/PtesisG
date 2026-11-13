@@ -1,0 +1,322 @@
+﻿@model CapaModelo.CMAjusteStock
+
+@{
+    ViewBag.Title = "Ajustar Stock";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-sliders-h me-2"></i>Ajustar Stock</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm("AjustarStock", "Venta", FormMethod.Post, new { id = "formAjuste" }))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="row g-3">
+                    <!-- Producto y Pollería -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.IdProducto,
+                                ViewBag.ListaProductos as SelectList,
+                                "Seleccione un producto",
+                                new
+                                {
+                                    @class = "form-select",
+                                    id = "ProductoSelect",
+                                    required = "required",
+                                    onchange = "cargarStockActual()"
+                                })
+                            <label for="ProductoSelect">Producto *</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.IdPolleria,
+                                ViewBag.ListaPollerias as SelectList,
+                                "Seleccione una pollería",
+                                new
+                                {
+                                    @class = "form-select",
+                                    id = "PolleriaSelect",
+                                    required = "required",
+                                    onchange = "cargarStockActual()"
+                                })
+                            <label for="PolleriaSelect">Pollería *</label>
+                        </div>
+                    </div>
+
+                    <!-- Información actual -->
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <label class="small text-muted">Stock Actual</label>
+                                <h4 id="stockActualInfo" class="fw-bold mb-0">0</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <label class="small text-muted">Stock Mínimo</label>
+                                <h4 id="stockMinimoInfo" class="fw-bold mb-0">0</h4>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <label class="small text-muted">Estado</label>
+                                <div id="estadoStockInfo" class="fw-bold mb-0">-</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Ajuste -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.NuevoStock,
+                                new
+                                {
+                                    @class = "form-control",
+                                    type = "number",
+                                    min = "0",
+                                    step = "0.01",
+                                    required = "required",
+                                    id = "NuevoStock"
+                                })
+                            <label for="NuevoStock">Nuevo Stock *</label>
+                        </div>
+                        <small class="text-muted">Ingrese el valor exacto que debe tener el stock</small>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card bg-info text-white">
+                            <div class="card-body text-center">
+                                <label class="small">Diferencia</label>
+                                <h4 id="diferenciaInfo" class="fw-bold mb-0">0</h4>
+                                <small id="tipoAjusteInfo"></small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Motivo -->
+                    <div class="col-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.Motivo,
+                                new
+                                {
+                                    @class = "form-control",
+                                    placeholder = "Motivo del ajuste",
+                                    rows = 3,
+                                    required = "required"
+                                })
+                            <label for="Motivo">Motivo del Ajuste *</label>
+                        </div>
+                        <small class="text-muted">Ej: Inventario físico, pérdida, error de registro, etc.</small>
+                    </div>
+
+                    <!-- Información adicional -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="NombreProducto" readonly />
+                            <label for="NombreProducto">Nombre Producto</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text" class="form-control" id="NombrePolleria" readonly />
+                            <label for="NombrePolleria">Nombre Pollería</label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <!-- Resumen del Ajuste -->
+                <div class="card border-warning">
+                    <div class="card-header bg-warning">
+                        <h6 class="mb-0"><i class="fas fa-list me-2"></i>Resumen del Ajuste</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4 text-center">
+                                <div class="display-4 fw-bold" id="stockAnteriorResumen">0</div>
+                                <small class="text-muted">Stock Anterior</small>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <i class="fas fa-arrow-right display-4 text-warning"></i>
+                            </div>
+                            <div class="col-md-4 text-center">
+                                <div class="display-4 fw-bold text-success" id="stockNuevoResumen">0</div>
+                                <small class="text-muted">Stock Nuevo</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <!-- Botones -->
+                <div class="d-flex justify-content-end gap-2">
+                    @Html.ActionLink("Cancelar", "StockDisponible", null,
+                        new { @class = "btn btn-secondary px-4" })
+                    <button type="submit" class="btn btn-warning px-4" onclick="return validarAjuste()">
+                        <i class="fas fa-save me-1"></i> Aplicar Ajuste
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript{
+    <script>
+        $(document).ready(function () {
+            // Si vienen parámetros en la URL, cargarlos
+            const urlParams = new URLSearchParams(window.location.search);
+            const idProducto = urlParams.get('idProducto');
+            const idPolleria = urlParams.get('idPolleria');
+
+            if (idProducto && idPolleria) {
+                $('#ProductoSelect').val(idProducto);
+                $('#PolleriaSelect').val(idPolleria);
+                cargarStockActual();
+            }
+
+            // Calcular diferencia cuando cambia el nuevo stock
+            $('#NuevoStock').on('input', calcularDiferencia);
+        });
+
+        function cargarStockActual() {
+            const idProducto = $('#ProductoSelect').val();
+            const idPolleria = $('#PolleriaSelect').val();
+
+            if (!idProducto || !idPolleria) {
+                resetearInformacion();
+                return;
+            }
+
+            $.post('@Url.Action("ObtenerStockProducto", "Venta")', {
+                idProducto: idProducto,
+                idPolleria: idPolleria
+            }, function (respuesta) {
+                if (respuesta.success) {
+                    const producto = respuesta.stock;
+
+                    // Actualizar información
+                    $('#stockActualInfo').text(producto.stockActual + ' unidades');
+                    $('#stockMinimoInfo').text(producto.stockMinimo + ' unidades');
+                    $('#estadoStockInfo').html(getBadgeEstado(producto.estadoStock));
+
+                    // Llenar campos ocultos
+                    $('#NombreProducto').val(producto.nombreProducto);
+                    $('#NombrePolleria').val('@ViewBag.PolleriaActiva?.Nombre');
+
+                    // Establecer stock actual como valor inicial
+                    $('#NuevoStock').val(producto.stockActual);
+                    $('input[name="StockActual"]').val(producto.stockActual);
+
+                    // Calcular diferencia
+                    calcularDiferencia();
+
+                    // Actualizar resumen
+                    $('#stockAnteriorResumen').text(producto.stockActual);
+                    $('#stockNuevoResumen').text(producto.stockActual);
+
+                } else {
+                    resetearInformacion();
+                    alert(respuesta.message);
+                }
+            });
+        }
+
+        function calcularDiferencia() {
+            const stockActual = parseFloat($('#stockActualInfo').text()) || 0;
+            const nuevoStock = parseFloat($('#NuevoStock').val()) || 0;
+            const diferencia = nuevoStock - stockActual;
+
+            $('#diferenciaInfo').text(diferencia >= 0 ? '+' + diferencia : diferencia);
+
+            if (diferencia > 0) {
+                $('#diferenciaInfo').removeClass('text-danger').addClass('text-success');
+                $('#tipoAjusteInfo').text('(Entrada de stock)').removeClass('text-danger').addClass('text-success');
+            } else if (diferencia < 0) {
+                $('#diferenciaInfo').removeClass('text-success').addClass('text-danger');
+                $('#tipoAjusteInfo').text('(Salida de stock)').removeClass('text-success').addClass('text-danger');
+            } else {
+                $('#diferenciaInfo').removeClass('text-success text-danger');
+                $('#tipoAjusteInfo').text('(Sin cambios)').removeClass('text-success text-danger');
+            }
+
+            // Actualizar resumen
+            $('#stockNuevoResumen').text(nuevoStock);
+        }
+
+        function getBadgeEstado(estado) {
+            switch (estado) {
+                case 'DISPONIBLE':
+                    return '<span class="badge bg-success">DISPONIBLE</span>';
+                case 'BAJO':
+                    return '<span class="badge bg-warning text-dark">BAJO</span>';
+                case 'AGOTADO':
+                    return '<span class="badge bg-danger">AGOTADO</span>';
+                default:
+                    return '<span class="badge bg-secondary">' + estado + '</span>';
+            }
+        }
+
+        function resetearInformacion() {
+            $('#stockActualInfo').text('0');
+            $('#stockMinimoInfo').text('0');
+            $('#estadoStockInfo').html('-');
+            $('#NombreProducto').val('');
+            $('#NombrePolleria').val('');
+            $('#NuevoStock').val('0');
+            calcularDiferencia();
+        }
+
+        function validarAjuste() {
+            const motivo = $('textarea[name="Motivo"]').val().trim();
+            const nuevoStock = parseFloat($('#NuevoStock').val()) || 0;
+            const stockActual = parseFloat($('#stockActualInfo').text()) || 0;
+
+            if (!motivo) {
+                alert('Debe ingresar el motivo del ajuste.');
+                return false;
+            }
+
+            if (nuevoStock < 0) {
+                alert('El stock no puede ser negativo.');
+                return false;
+            }
+
+            if (nuevoStock === stockActual) {
+                if (!confirm('El stock nuevo es igual al actual. ¿Desea continuar?')) {
+                    return false;
+                }
+            }
+
+            const mensaje = '¿Está seguro de aplicar este ajuste?\n\n' +
+                           'Stock anterior: ' + stockActual + '\n' +
+                           'Stock nuevo: ' + nuevoStock + '\n' +
+                           'Diferencia: ' + (nuevoStock - stockActual) + '\n\n' +
+                           'Motivo: ' + motivo;
+
+            if (!confirm(mensaje)) {
+                return false;
+            }
+
+            // Mostrar loading
+            $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+
+            return true;
+        }
+    </script>
+}

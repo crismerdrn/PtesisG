@@ -1,0 +1,130 @@
+﻿@model CapaModelo.CMInsumo
+
+@{
+    ViewBag.Title = "Editar Insumo";
+}
+
+<div class="container-fluid px-4">
+    @if (!ViewData.ModelState.IsValid)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            Por favor, corrija los errores en el formulario.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Insumo</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_insumo)
+
+                <div class="row g-3">
+
+                    <div class="col-md-8">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.nombre,
+                                new
+                                {
+                                    @class = "form-control" + (ViewData.ModelState["nombre"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Nombre",
+                                    maxlength = "100",
+                                    id = "Nombre"
+                                })
+                            @Html.LabelFor(m => m.nombre, "Nombre del Insumo")
+                            @Html.ValidationMessageFor(m => m.nombre, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.MEDIDAS_id_medida,
+                                ViewBag.ListaMedidas as SelectList,
+                                "Seleccione una medida",
+                                new
+                                {
+                                    @class = "form-select" + (ViewData.ModelState["MEDIDAS_id_medida"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    id = "MedidaSelect"
+                                })
+                            <label for="MedidaSelect">Unidad de Medida</label>
+                            @Html.ValidationMessageFor(m => m.MEDIDAS_id_medida, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.descripcion,
+                                new
+                                {
+                                    @class = "form-control" + (ViewData.ModelState["descripcion"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Descripción",
+                                    style = "height: 120px",
+                                    maxlength = "200",
+                                    id = "Descripcion"
+                                })
+                            @Html.LabelFor(m => m.descripcion, "Descripción")
+                            @Html.ValidationMessageFor(m => m.descripcion, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-check form-switch ps-5 mt-2">
+                            @Html.CheckBoxFor(m => m.estado, new { @class = "form-check-input", style = "transform: scale(1.2);" })
+                            <label class="form-check-label fw-bold ms-2" for="estado">Insumo Activo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-warning px-4">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver", "Index", null, new { @class = "btn btn-secondary px-4" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script>
+        // Validación de Nombre: Permite letras, números, espacios y guiones (ej: Aceite 5L)
+        document.getElementById('Nombre').addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^a-zA-Z0-9áéíóúÁÉÍÓÚñÑ\s\-\.]/g, '');
+        });
+
+        // Contador de caracteres para descripción
+        document.getElementById('Descripcion').addEventListener('input', function (e) {
+            const maxLength = 200;
+            const currentLength = this.value.length;
+
+            let counter = document.getElementById('descripcion-counter');
+            if (!counter) {
+                counter = document.createElement('small');
+                counter.id = 'descripcion-counter';
+                counter.className = 'form-text text-muted text-end d-block mt-1';
+                // Subimos dos niveles para salir del form-floating
+                this.parentNode.parentNode.appendChild(counter);
+            }
+
+            counter.textContent = `${currentLength}/${maxLength} caracteres`;
+
+            if (currentLength >= maxLength) {
+                counter.classList.add('text-danger', 'fw-bold');
+            } else {
+                counter.classList.remove('text-danger', 'fw-bold');
+            }
+        });
+
+        // Disparar evento input al cargar para que el contador aparezca si hay texto
+        document.getElementById('Descripcion').dispatchEvent(new Event('input'));
+    </script>
+}

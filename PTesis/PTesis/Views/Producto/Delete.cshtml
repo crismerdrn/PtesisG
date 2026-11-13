@@ -1,0 +1,51 @@
+﻿@model CapaModelo.CMProducto
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-danger rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-trash-alt me-2"></i>Confirmar Inactivación (Eliminación Lógica)</h4>
+        </div>
+
+        <div class="card-body">
+            <h5 class="text-danger mb-4">
+                ¿Está seguro que desea **inactivar** (eliminar lógicamente) el producto
+                <strong>@Model.Nombre</strong>?
+            </h5>
+            <p class="text-muted small">
+                *La eliminación es **lógica** (cambia el estado a inactivo) debido a que tiene validaciones en la base de datos (ventas/compras asociadas).
+            </p>
+
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_producto)
+
+                <dl class="row">
+                    <dt class="col-sm-3">Nombre</dt>
+                    <dd class="col-sm-9">@Model.Nombre</dd>
+
+                    <dt class="col-sm-3">Tipo Producto</dt>
+                    <dd class="col-sm-9">@Model.TipoProducto</dd>
+
+                    <dt class="col-sm-3">Medida</dt>
+                    <dd class="col-sm-9">@Model.Medida (@Model.AbreviaturaMedida)</dd>
+
+                    <dt class="col-sm-3">Precio Venta</dt>
+                    <dd class="col-sm-9">@Model.PrecioVenta.ToString("N2")</dd>
+
+                    <dt class="col-sm-3">Fecha de Registro</dt>
+                    <dd class="col-sm-9">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
+                </dl>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-danger me-2">
+                        <i class="fas fa-ban me-1"></i> Confirmar Inactivación
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

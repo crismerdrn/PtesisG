@@ -1,0 +1,58 @@
+﻿@* _SweetAlertsPartial.cshtml *@
+@using System.Web
+@{
+    // Solo procesar si hay mensajes
+    bool hasMessages =
+        TempData["Success"] != null ||
+        TempData["Error"] != null ||
+        TempData["Warning"] != null ||
+        TempData["Info"] != null;
+}
+
+@if (hasMessages)
+{
+    <script>
+        // Esperar a que SweetAlertHelper esté disponible
+        function showTempDataMessages() {
+            if (window.SweetAlert && window.SweetAlert.show) {
+                @if (TempData["Success"] != null)
+                {
+                    <text>
+                    SweetAlert.show('success', '@HttpUtility.JavaScriptStringEncode(TempData["Success"].ToString())');
+                    </text>
+                }
+
+                @if (TempData["Error"] != null)
+                {
+                    <text>
+                    SweetAlert.show('error', '@HttpUtility.JavaScriptStringEncode(TempData["Error"].ToString())');
+                    </text>
+                }
+
+                @if (TempData["Warning"] != null)
+                {
+                    <text>
+                    SweetAlert.show('warning', '@HttpUtility.JavaScriptStringEncode(TempData["Warning"].ToString())');
+                    </text>
+                }
+
+                @if (TempData["Info"] != null)
+                {
+                    <text>
+                    SweetAlert.show('info', '@HttpUtility.JavaScriptStringEncode(TempData["Info"].ToString())');
+                    </text>
+                }
+            } else {
+                // Reintentar después de 100ms si no está cargado
+                setTimeout(showTempDataMessages, 100);
+            }
+        }
+
+        // Iniciar cuando el documento esté listo
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', showTempDataMessages);
+        } else {
+            showTempDataMessages();
+        }
+    </script>
+}

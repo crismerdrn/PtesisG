@@ -1,0 +1,160 @@
+﻿@model CapaModelo.CMInsumoProducto
+
+@{
+    ViewBag.Title = "Editar Asignación Insumo-Producto";
+}
+
+<div class="container-fluid px-4">
+
+    @if (TempData["MensajeCambioInsumo"] != null)
+    {
+        <div class="card border-warning shadow-sm rounded-4 mt-4 mb-4">
+            <div class="card-header bg-warning text-dark rounded-top-4">
+                <h5 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Cambio de Insumo Detectado</h5>
+            </div>
+            <div class="card-body">
+                <p>@TempData["MensajeCambioInsumo"]</p>
+                <div class="d-flex gap-2 mt-3">
+                    @using (Html.BeginForm("CambiarInsumoConReactivacion", "InsumoProducto", FormMethod.Post))
+                    {
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-check me-1"></i> Sí, reactivar y cambiar insumo
+                        </button>
+                    }
+
+                    @Html.ActionLink("Mantener actual", "Edit",
+                        new { id = Model.id_insumo_producto, idProducto = Request.QueryString["idProducto"] },
+                        new { @class = "btn btn-secondary" })
+                </div>
+            </div>
+        </div>
+    }
+
+    @if (TempData["MensajeCambioInsumo"] == null)
+    {
+        <div class="card shadow-sm border-0 rounded-4 mt-4 mb-4">
+            <div class="card-header bg-warning text-dark rounded-top-4">
+                <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Asignación</h4>
+            </div>
+
+            <div class="card-body">
+                @using (Html.BeginForm())
+                {
+                    @Html.AntiForgeryToken()
+                    @Html.HiddenFor(m => m.id_insumo_producto)
+                    @Html.HiddenFor(m => m.PRODUCTO_id_producto)
+                    @Html.HiddenFor(m => m.fecha_registro)
+                    @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                    <input type="hidden" name="idProducto" value="@Request.QueryString["idProducto"]" />
+
+                    <div class="row g-3">
+                        <!-- Producto (Solo lectura) -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                <input type="text" class="form-control bg-light" value="@Model.NombreProducto" readonly />
+                                <label>Producto</label>
+                            </div>
+                        </div>
+
+                        <!-- Insumo -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.DropDownListFor(m => m.INSUMO_id_insumo,
+                                    (SelectList)ViewBag.ListaInsumos,
+                                    "Seleccione Insumo",
+                                    new { @class = "form-select", id = "editInsumo" })
+                                @Html.LabelFor(m => m.INSUMO_id_insumo, "Insumo *")
+                                @Html.ValidationMessageFor(m => m.INSUMO_id_insumo, "", new { @class = "text-danger small" })
+                            </div>
+                        </div>
+
+                        <!-- Cantidad Requerida -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.cantidad_requerida,
+                                    "{0:G29}",
+                                    new
+                                    {
+                                        @class = "form-control",
+                                        id = "editCantidad",
+                                        placeholder = "Cantidad",
+                                        type = "number",
+                                        step = "any",
+                                        min = "0.0001"
+                                    })
+                                @Html.LabelFor(m => m.cantidad_requerida, "Cantidad Requerida *")
+                                @Html.ValidationMessageFor(m => m.cantidad_requerida, "", new { @class = "text-danger small" })
+                            </div>
+                            <small id="ayudaMedidaEdit" class="form-text d-block mt-1"></small>
+                        </div>
+
+                        <!-- Observaciones -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.observaciones,
+                                    new
+                                    {
+                                        @class = "form-control",
+                                        placeholder = "Observaciones",
+                                        maxlength = "500"
+                                    })
+                                @Html.LabelFor(m => m.observaciones, "Observaciones")
+                                @Html.ValidationMessageFor(m => m.observaciones, "", new { @class = "text-danger small" })
+                            </div>
+                        </div>
+
+                        <!-- Switch de Estado -->
+                        <div class="col-md-12 mt-3">
+                            <div class="form-check form-switch">
+                                @Html.CheckBoxFor(m => m.estado, new { @class = "form-check-input", id = "estadoSwitch" })
+                                <label class="form-check-label fw-bold" for="estadoSwitch">
+                                    Asignación Activa
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex justify-content-start gap-2">
+                        <button type="submit" class="btn btn-warning">
+                            <i class="fas fa-save me-1"></i> Actualizar
+                        </button>
+                        @Html.ActionLink("Volver", "Index", new { idProducto = ViewBag.IdProductoFiltro ?? Model.PRODUCTO_id_producto }, new { @class = "btn btn-secondary" })
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section JavaScript {
+    <script>
+        $(document).ready(function () {
+            function actualizarMensajeAyuda() {
+                var textoSeleccionado = $('#editInsumo option:selected').text().toLowerCase();
+                var helper = $('#ayudaMedidaEdit');
+
+                if (textoSeleccionado.indexOf('arroz') !== -1 || textoSeleccionado.indexOf('papa') !== -1) {
+                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos (gr)</strong> (ej: <em>120</em>) o fracción.');
+                } else if (textoSeleccionado.indexOf('aceite') !== -1) {
+                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese consumo en <strong>Mililitros (mls)</strong> (ej: <em>40</em>).');
+                } else if (textoSeleccionado.indexOf('pollo') !== -1) {
+                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos</strong> (ej: <em>300</em>) o en <strong>Kilos</strong> (ej: <em>0.3</em>).');
+                } else {
+                    helper.empty();
+                }
+            }
+
+            // Ejecutar al cargar la vista con el insumo actual
+            actualizarMensajeAyuda();
+
+            // Ejecutar si el usuario cambia de insumo en el dropdown
+            $('#editInsumo').on('change', function () {
+                actualizarMensajeAyuda();
+            });
+        });
+    </script>
+}

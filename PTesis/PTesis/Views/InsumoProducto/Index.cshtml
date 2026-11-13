@@ -1,0 +1,287 @@
+﻿@model List<CapaModelo.CMInsumoProducto>
+
+@{
+    ViewBag.Title = "Insumos por Producto";
+    int paginaActual = ViewBag.PaginaActual ?? 1;
+    int totalPaginas = ViewBag.TotalPaginas ?? 1;
+    int totalRegistros = ViewBag.TotalRegistros ?? (Model != null ? Model.Count : 0);
+    int pageSize = ViewBag.PageSize ?? 10;
+    int desde = totalRegistros == 0 ? 0 : ((paginaActual - 1) * pageSize) + 1;
+    int hasta = Math.Min(paginaActual * pageSize, totalRegistros);
+}
+
+<div class="container-fluid px-4">
+
+    <!-- Título -->
+    <h2 class="fw-bold mt-4 mb-2">
+        <i class="fas fa-link me-2 text-primary"></i>
+        @if (ViewBag.NombreProducto != null)
+        {
+            <span>Insumos de @ViewBag.NombreProducto</span>
+        }
+        else
+        {
+            <span>Insumos por Producto</span>
+        }
+    </h2>
+
+    <!-- Botones de Acción Superior -->
+    <div class="mb-3 d-flex align-items-center gap-2">
+        @if (ViewBag.PuedeCrear != null && (bool)ViewBag.PuedeCrear)
+        {
+            @Html.ActionLink("Nueva Asignación", "Create", new { idProducto = ViewBag.IdProductoSeleccionado },
+                new { @class = "btn btn-primary shadow-sm" })
+        }
+
+        @if (ViewBag.IdProductoSeleccionado != null)
+        {
+            <a href="@Url.Action("CostoProduccion", "InsumoProducto", new { idProducto = ViewBag.IdProductoSeleccionado })"
+               class="btn btn-outline-success shadow-sm">
+                <i class="fas fa-calculator me-1"></i> Costo y Rentabilidad
+            </a>
+        }
+    </div>
+
+    <!-- Barra de Filtros en una sola fila -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body py-3">
+            <form method="get" action="@Url.Action("Index", "InsumoProducto")" class="row g-2 align-items-center">
+                <!-- Buscador de texto -->
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-white border-end-0 text-muted"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control border-start-0 ps-0"
+                               placeholder="Buscar por nombre de producto, insumo u observación..." />
+                    </div>
+                </div>
+
+                <!-- Desplegable de Producto -->
+                <div class="col-md-3">
+                    @Html.DropDownList("idProducto", (SelectList)ViewBag.ListaProductos, "Todos los productos",
+                        new { @class = "form-select", onchange = "this.form.submit()" })
+                </div>
+
+                <!-- Desplegable de Estado -->
+                <div class="col-md-2">
+                    <select name="estado" class="form-select" onchange="this.form.submit()">
+                        <option value="">Todos los estados</option>
+                        <option value="activo" @(ViewBag.EstadoFiltro == "activo" ? "selected" : "")>Activo</option>
+                        <option value="inactivo" @(ViewBag.EstadoFiltro == "inactivo" ? "selected" : "")>Inactivo</option>
+                    </select>
+                </div>
+
+                <!-- Botones Filtrar y Limpiar -->
+                <div class="col-md-2 d-flex gap-1 justify-content-end">
+                    <button type="submit" class="btn btn-success flex-fill">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                    <a href="@Url.Action("Index", "InsumoProducto")" class="btn btn-secondary flex-fill">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-0">
+            @if (Model != null && Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0" id="tablaInsumoProducto">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 50px;">#</th>
+                                <th style="width: 25%;">Producto</th>
+                                <th style="width: 22%;">Insumo</th>
+                                <th class="text-center" style="width: 14%;">Cantidad Requerida</th>
+                                <th>Observaciones</th>
+                                <th class="text-center" style="width: 90px;">Estado</th>
+                                <th class="text-center" style="width: 140px;">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td class="text-center fw-bold text-muted">
+                                        #@item.id_insumo_producto
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">@item.NombreProducto</span>
+                                    </td>
+                                    <td>
+                                        <span class="fw-semibold">@item.NombreInsumo</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="fw-bold fs-6">
+                                            @item.cantidad_requerida.ToString("G29")
+                                        </span>
+                                        <span class="badge bg-light text-dark border ms-1">
+                                            @(string.IsNullOrEmpty(item.AbreviaturaMedida) ? item.MedidaInsumo : item.AbreviaturaMedida)
+                                        </span>
+                                    </td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(item.observaciones) && item.observaciones != "Sin observaciones")
+                                        {
+                                            <small class="text-secondary">@item.observaciones</small>
+                                        }
+                                        else
+                                        {
+                                            <small class="text-muted fst-italic">Sin observaciones</small>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        @if (item.estado)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactivo</span>
+                                        }
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            @if (ViewBag.PuedeEditar != null && (bool)ViewBag.PuedeEditar)
+                                            {
+                                                <a href="@Url.Action("Edit", new { id = item.id_insumo_producto, idProducto = ViewBag.IdProductoSeleccionado })"
+                                                   class="btn btn-warning btn-sm">
+                                                    Editar
+                                                </a>
+                                            }
+
+                                            @if (ViewBag.PuedeEliminar != null && (bool)ViewBag.PuedeEliminar)
+                                            {
+                                                <button type="button" class="btn btn-danger btn-sm btn-eliminar ms-1"
+                                                        data-id="@item.id_insumo_producto"
+                                                        data-insumo="@item.NombreInsumo"
+                                                        data-producto="@item.NombreProducto">
+                                                    Eliminar
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pie con Paginación Centrada -->
+                <div class="card-footer bg-white border-0 py-3">
+                    @if (totalPaginas > 1)
+                    {
+                        <div class="d-flex justify-content-center mb-2">
+                            <nav aria-label="Navegación de páginas">
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item @(paginaActual == 1 ? "disabled" : "")">
+                                        <a class="page-link" href="@Url.Action("Index", new { idProducto = ViewBag.IdProductoSeleccionado, buscar = ViewBag.Buscar, estado = ViewBag.EstadoFiltro, page = paginaActual - 1 })">
+                                            <i class="fas fa-chevron-left me-1"></i> Anterior
+                                        </a>
+                                    </li>
+
+                                    @for (int p = 1; p <= totalPaginas; p++)
+                                    {
+                                        <li class="page-item @(p == paginaActual ? "active" : "")">
+                                            <a class="page-link" href="@Url.Action("Index", new { idProducto = ViewBag.IdProductoSeleccionado, buscar = ViewBag.Buscar, estado = ViewBag.EstadoFiltro, page = p })">
+                                                @p
+                                            </a>
+                                        </li>
+                                    }
+
+                                    <li class="page-item @(paginaActual == totalPaginas ? "disabled" : "")">
+                                        <a class="page-link" href="@Url.Action("Index", new { idProducto = ViewBag.IdProductoSeleccionado, buscar = ViewBag.Buscar, estado = ViewBag.EstadoFiltro, page = paginaActual + 1 })">
+                                            Siguiente <i class="fas fa-chevron-right ms-1"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        </div>
+                    }
+
+                    <div class="text-center text-muted small">
+                        <i class="fas fa-chart-bar me-1"></i> Mostrando <strong>@desde</strong> a <strong>@hasta</strong> de <strong>@totalRegistros</strong> asignaciones
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="text-center py-5">
+                    <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                    @if (ViewBag.IdProductoSeleccionado != null)
+                    {
+                        <h5 class="text-muted">Este producto no tiene insumos asignados</h5>
+                        <p class="text-muted">Comienza asignando insumos a la receta para calcular costos y descontar inventario.</p>
+                        @Html.ActionLink("Asignar Receta", "Create", new { idProducto = ViewBag.IdProductoSeleccionado },
+                            new { @class = "btn btn-success mt-2" })
+                    }
+                    else
+                    {
+                        <h5 class="text-muted">No se encontraron asignaciones registradas</h5>
+                        <p class="text-muted">Selecciona un producto o agrega una asignación inicial.</p>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script>
+        $(document).ready(function () {
+            $(document).on('click', '.btn-eliminar', function (e) {
+                e.preventDefault();
+
+                var btn = $(this);
+                var id = btn.data('id');
+                var insumo = btn.data('insumo');
+                var producto = btn.data('producto');
+
+                Swal.fire({
+                    title: '¿Eliminar asignación?',
+                    text: '¿Desea desvincular el insumo "' + insumo + '" del producto "' + producto + '"?',
+                    icon: 'warning',
+                    showCancelButton: true,
+                    confirmButtonColor: '#dc3545',
+                    cancelButtonColor: '#6c757d',
+                    confirmButtonText: 'Sí, eliminar',
+                    cancelButtonText: 'Cancelar'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        btn.prop('disabled', true);
+
+                        $.post('@Url.Action("EliminarAjax", "InsumoProducto")', { id: id })
+                            .done(function (data) {
+                                if (data.success) {
+                                    Swal.fire({
+                                        title: '¡Eliminado!',
+                                        text: data.message,
+                                        icon: 'success'
+                                    }).then(() => {
+                                        location.reload();
+                                    });
+                                } else {
+                                    Swal.fire({
+                                        title: 'Error',
+                                        text: data.message,
+                                        icon: 'error'
+                                    });
+                                    btn.prop('disabled', false);
+                                }
+                            })
+                            .fail(function () {
+                                Swal.fire({
+                                    title: 'Error',
+                                    text: 'No se pudo comunicar con el servidor.',
+                                    icon: 'error'
+                                });
+                                btn.prop('disabled', false);
+                            });
+                    }
+                });
+            });
+        });
+    </script>
+}

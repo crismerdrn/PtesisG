@@ -1,0 +1,40 @@
+﻿@{
+    ViewBag.Title = "Test Relación";
+}
+
+<div class="container">
+    <h2>Test de Relación Insumo-Producto</h2>
+
+    <div class="alert alert-info">
+        @ViewBag.Mensaje
+    </div>
+
+    @if (ViewBag.Relacion != null)
+    {
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Datos de la Relación</h5>
+                <dl class="row">
+                    <dt class="col-sm-3">ID Relación:</dt>
+                    <dd class="col-sm-9">@ViewBag.Relacion.id_insumo_producto</dd>
+
+                    <dt class="col-sm-3">Producto:</dt>
+                    <dd class="col-sm-9">@ViewBag.Relacion.NombreProducto (ID: @ViewBag.Relacion.PRODUCTO_id_producto)</dd>
+
+                    <dt class="col-sm-3">Insumo:</dt>
+                    <dd class="col-sm-9">@ViewBag.Relacion.NombreInsumo (ID: @ViewBag.Relacion.INSUMO_id_insumo)</dd>
+
+                    <dt class="col-sm-3">Cantidad:</dt>
+                    <dd class="col-sm-9">@ViewBag.Relacion.cantidad_requerida</dd>
+
+                    <dt class="col-sm-3">Observaciones:</dt>
+                    <dd class="col-sm-9">@ViewBag.Relacion.observaciones</dd>
+                </dl>
+            </div>
+        </div>
+    }
+
+    <div class="mt-3">
+        @Html.ActionLink("Volver al Index", "Index", null, new { @class = "btn btn-secondary" })
+    </div>
+</div>

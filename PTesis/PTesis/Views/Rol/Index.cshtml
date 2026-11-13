@@ -1,0 +1,213 @@
+﻿@model List<CapaModelo.CMRol>
+@using System.Web
+
+<div class="container-fluid px-4">
+
+    <div class="mt-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-user-shield me-2 text-primary"></i>
+            Listado de Roles
+        </h2>
+    </div>
+
+    <div class="mb-3">
+        @Html.ActionLink("Agregar Rol", "Create", null,
+            new { @class = "btn btn-primary shadow-sm" })
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  action="@Url.Action("Index", "Rol")"
+                  class="row g-2 align-items-center">
+
+                <div class="col-md-9 col-lg-10">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-search"></i>
+                        </span>
+
+                        <input type="text"
+                               name="buscar"
+                               value="@ViewBag.Buscar"
+                               class="form-control"
+                               placeholder="Buscar por nombre o descripción..." />
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-lg-2 d-flex gap-2 justify-content-end">
+
+                    <button type="submit"
+                            class="btn btn-success w-50">
+
+                        <i class="fas fa-search me-1"></i>
+                        Buscar
+
+                    </button>
+
+                    <a href="@Url.Action("Index","Rol")"
+                       class="btn btn-secondary w-50">
+
+                        <i class="fas fa-undo me-1"></i>
+                        Limpiar
+
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+
+    <div class="card shadow-sm border-0">
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered table-hover align-middle mb-0">
+
+                    <thead class="table-light">
+                        <tr>
+                            <th class="w-25">Nombre</th>
+                            <th class="w-50">Descripción</th>
+                            <th class="w-25 text-center">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var rol in Model)
+                            {
+                                <tr>
+
+                                    <td class="fw-semibold">
+                                        @rol.Nombre
+                                    </td>
+
+                                    <td>
+                                        @rol.Descripcion
+                                    </td>
+
+                                    <td class="text-center">
+
+                                        <div class="btn-group">
+
+                                            @Html.ActionLink(
+                                                "Editar",
+                                                "Edit",
+                                                new { id = rol.id_rol },
+                                                new { @class = "btn btn-warning btn-sm" })
+
+                                            <button type="button"
+                                                    class="btn btn-danger btn-sm ms-1"
+                                                    data-id="@rol.id_rol"
+                                                    data-nombre="@rol.Nombre"
+                                                    onclick="confirmarEliminar(this)">
+
+                                                <i class="fas fa-trash-alt me-1"></i>
+                                                Eliminar
+
+                                            </button>
+
+                                        </div>
+
+                                    </td>
+
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+
+                                <td colspan="3"
+                                    class="text-center py-4">
+
+                                    <i class="fas fa-info-circle me-2 text-muted"></i>
+
+                                    @if (!string.IsNullOrEmpty(ViewBag.Buscar))
+                                    {
+                                        <span>
+                                            No se encontraron roles que coincidan con la búsqueda.
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span>
+                                            No hay roles registrados.
+                                        </span>
+                                    }
+
+                                </td>
+
+                            </tr>
+                        }
+
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<form id="formEliminar"
+      method="post"
+      style="display:none;">
+
+    @Html.AntiForgeryToken()
+
+</form>
+
+<script>
+
+document.addEventListener("DOMContentLoaded", function () {
+
+    @if (TempData["Exito"] != null)
+    {
+        var mensaje = HttpUtility.JavaScriptStringEncode(TempData["Exito"].ToString());
+
+        <text>
+            mostrarExito('@Html.Raw(mensaje)');
+        </text>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        var mensaje = HttpUtility.JavaScriptStringEncode(TempData["Error"].ToString());
+
+        <text>
+            mostrarError('@Html.Raw(mensaje)');
+        </text>
+    }
+
+});
+
+function confirmarEliminar(btn) {
+
+    let id = btn.dataset.id;
+    let nombre = btn.dataset.nombre;
+
+    confirmarEliminacion(nombre, function () {
+
+        let form = document.getElementById("formEliminar");
+
+        form.action = '@Url.Action("Delete","Rol")?id=' + id;
+
+        form.submit();
+
+    });
+
+}
+
+</script>

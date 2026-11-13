@@ -1,0 +1,120 @@
+﻿@model CapaModelo.CMProveedor
+@{
+    ViewBag.Title = "Eliminar Proveedor";
+}
+
+<div class="container-fluid px-4">
+
+    <div class="card shadow-sm border-danger rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-trash-alt me-2"></i>Confirmar Eliminación</h4>
+        </div>
+
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>¡Advertencia!</strong> Esta acción no se puede deshacer. Todos los datos del proveedor serán eliminados permanentemente.
+            </div>
+
+            <h5 class="text-danger mb-4">
+                ¿Está seguro que desea eliminar al proveedor <strong>"@Model.NombreCompleto"</strong>?
+            </h5>
+
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_proveedor)
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Tipo:</dt>
+                            <dd class="col-sm-9">
+                                @if (Model.esEmpresa)
+                                {
+                                    <span class="badge bg-info">Empresa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Persona Natural</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Nombre/Razón:</dt>
+                            <dd class="col-sm-9">@Model.NombreCompleto</dd>
+
+                            @if (Model.esEmpresa)
+                            {
+                                <dt class="col-sm-3">NIT:</dt>
+                                <dd class="col-sm-9">@Model.NIT</dd>
+                            }
+                            else
+                            {
+                                <dt class="col-sm-3">CI:</dt>
+                                <dd class="col-sm-9">@Model.CI</dd>
+                            }
+
+                            <dt class="col-sm-3">Teléfono:</dt>
+                            <dd class="col-sm-9">@Model.Telefono</dd>
+
+                            <dt class="col-sm-3">Email:</dt>
+                            <dd class="col-sm-9">
+                                @if (!string.IsNullOrEmpty(Model.Email))
+                                {
+                                    @Model.Email
+                                }
+                                else
+                                {
+                                    <span class="text-muted">Sin email</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Estado:</dt>
+                            <dd class="col-sm-9">
+                                @if (Model.Estado)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </dd>
+
+                            <dt class="col-sm-3">Registrado:</dt>
+                            <dd class="col-sm-9">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="fas fa-check-circle me-2"></i>Confirmar Eliminación
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary px-4" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script>
+        $(document).ready(function () {
+            var errorMsg = '@Html.Raw(HttpUtility.JavaScriptStringEncode(TempData["Error"] as string ?? ""))';
+            if (errorMsg && errorMsg.trim() !== '') {
+                Swal.fire({
+                    title: 'Error',
+                    text: errorMsg,
+                    icon: 'error',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#dc3545'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        window.location.href = '@Url.Action("Index", "Proveedor")';
+                    }
+                });
+            }
+        });
+    </script>
+}

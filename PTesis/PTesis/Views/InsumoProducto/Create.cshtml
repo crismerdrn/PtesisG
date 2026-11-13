@@ -1,0 +1,220 @@
+﻿@model CapaModelo.CMInsumoProducto
+
+@{
+    ViewBag.Title = "Asignar Receta de Insumos";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4 mb-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h4 class="mb-0">
+                <i class="fas fa-utensils me-2"></i>Asignar Receta / Fórmula de Insumos
+            </h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm("CreateMultiple", "InsumoProducto", FormMethod.Post, new { id = "formReceta" }))
+            {
+                @Html.AntiForgeryToken()
+                <input type="hidden" id="insumosJson" name="insumosJson" value="[]" />
+
+                <!-- Selección de Producto -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Producto Elaborado *</label>
+                        @if (Model.PRODUCTO_id_producto > 0)
+                        {
+                            <input type="text" class="form-control bg-light" value="@ViewBag.NombreProducto" readonly />
+                            <input type="hidden" name="idProducto" id="idProducto" value="@Model.PRODUCTO_id_producto" />
+                        }
+                        else
+                        {
+                            @Html.DropDownList("idProducto", (SelectList)ViewBag.ListaProductos, "Seleccione Producto (Comida / Postre)",
+                                new { @class = "form-select", id = "idProducto", required = "required" })
+                        }
+                    </div>
+                </div>
+
+                <!-- Panel interactivo para agregar insumos a la receta -->
+                <div class="card bg-light border-0 rounded-3 mb-4">
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-3 text-secondary">
+                            <i class="fas fa-plus-circle me-1"></i> Agregar insumo a la receta
+                        </h6>
+                        <div class="row g-3 align-items-end">
+                            <div class="col-md-4">
+                                <label class="form-label small fw-bold">Insumo *</label>
+                                @Html.DropDownList("tempInsumo", (SelectList)ViewBag.ListaInsumos, "Seleccione Insumo",
+                                    new { @class = "form-select", id = "tempInsumo" })
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Cantidad Requerida *</label>
+                                <input type="number" step="any" min="0.0001" class="form-control" id="tempCantidad" placeholder="Ej: 120 (gr) o 0.3 (kg)" />
+                            </div>
+
+                            <div class="col-md-3">
+                                <label class="form-label small fw-bold">Observación</label>
+                                <input type="text" class="form-control" id="tempObservacion" placeholder="Opcional" maxlength="500" />
+                            </div>
+
+                            <div class="col-md-2">
+                                <button type="button" class="btn btn-success w-100" id="btnAgregarItem">
+                                    <i class="fas fa-plus me-1"></i> Agregar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabla previa de insumos -->
+                <h6 class="fw-bold mb-2">Insumos que componen este producto:</h6>
+                <div class="table-responsive mb-4">
+                    <table class="table table-bordered table-hover align-middle mb-0" id="tablaDetallesReceta">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Insumo</th>
+                                <th class="text-center" style="width: 180px;">Cantidad Requerida</th>
+                                <th>Observaciones</th>
+                                <th class="text-center" style="width: 100px;">Acción</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbodyReceta">
+                            <tr id="filaVacia">
+                                <td colspan="4" class="text-center text-muted py-4">
+                                    <i class="fas fa-info-circle me-1"></i> Aún no se han agregado insumos a la receta.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <hr class="my-4" />
+
+                <!-- Botones de guardado -->
+                <div class="d-flex justify-content-start gap-2">
+                    <button type="submit" class="btn btn-primary" id="btnGuardarReceta">
+                        <i class="fas fa-save me-1"></i> Guardar Receta Completa
+                    </button>
+                    @Html.ActionLink("Volver", "Index", new { idProducto = Model.PRODUCTO_id_producto > 0 ? (int?)Model.PRODUCTO_id_producto : null },
+                        new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script>
+        var itemsReceta = [];
+
+        $(document).ready(function () {
+
+            // Mensaje contextual inteligente según el insumo seleccionado
+            $('#tempInsumo').on('change', function () {
+                var textoSeleccionado = $(this).find('option:selected').text().toLowerCase();
+                var helper = $('#ayudaMedida');
+
+                if (helper.length === 0) {
+                    $('#tempCantidad').after('<small id="ayudaMedida" class="form-text d-block mt-1"></small>');
+                    helper = $('#ayudaMedida');
+                }
+
+                if (textoSeleccionado.indexOf('arroz') !== -1 || textoSeleccionado.indexOf('papa') !== -1) {
+                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos (gr)</strong> (ej: <em>120</em>) o fracción.');
+                } else if (textoSeleccionado.indexOf('aceite') !== -1) {
+                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese consumo en <strong>Mililitros (mls)</strong> (ej: <em>40</em>).');
+                } else if (textoSeleccionado.indexOf('pollo') !== -1) {
+                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos</strong> (ej: <em>300</em>) o en <strong>Kilos</strong> (ej: <em>0.3</em>).');
+                } else {
+                    helper.empty();
+                }
+            });
+
+            // Botón Agregar
+            $('#btnAgregarItem').on('click', function () {
+                var idInsumo = $('#tempInsumo').val();
+                var textoInsumo = $('#tempInsumo option:selected').text();
+                var cantidad = parseFloat($('#tempCantidad').val());
+                var observacion = $('#tempObservacion').val().trim();
+
+                if (!idInsumo || idInsumo === '') {
+                    Swal.fire('Atención', 'Debe seleccionar un insumo.', 'warning');
+                    return;
+                }
+
+                if (isNaN(cantidad) || cantidad <= 0) {
+                    Swal.fire('Atención', 'Ingrese una cantidad válida mayor a cero.', 'warning');
+                    return;
+                }
+
+                var existe = itemsReceta.some(function (item) {
+                    return item.INSUMO_id_insumo == idInsumo;
+                });
+
+                if (existe) {
+                    Swal.fire('Atención', 'Este insumo ya fue agregado a la receta.', 'info');
+                    return;
+                }
+
+                itemsReceta.push({
+                    INSUMO_id_insumo: parseInt(idInsumo),
+                    NombreInsumo: textoInsumo,
+                    cantidad_requerida: cantidad,
+                    observaciones: observacion
+                });
+
+                actualizarTabla();
+
+                $('#tempInsumo').val('').trigger('change');
+                $('#tempCantidad').val('');
+                $('#tempObservacion').val('');
+            });
+
+            // Quitar ítem
+            $(document).on('click', '.btn-quitar', function () {
+                var index = $(this).data('index');
+                itemsReceta.splice(index, 1);
+                actualizarTabla();
+            });
+
+            // Envío formulario
+            $('#formReceta').on('submit', function (e) {
+                var idProd = $('#idProducto').val();
+                if (!idProd || idProd === '') {
+                    e.preventDefault();
+                    Swal.fire('Atención', 'Debe seleccionar un producto.', 'warning');
+                    return false;
+                }
+
+                if (itemsReceta.length === 0) {
+                    e.preventDefault();
+                    Swal.fire('Atención', 'Debe agregar al menos un insumo a la receta antes de guardar.', 'warning');
+                    return false;
+                }
+
+                $('#insumosJson').val(JSON.stringify(itemsReceta));
+                return true;
+            });
+
+            function actualizarTabla() {
+                var tbody = $('#tbodyReceta');
+                tbody.empty();
+
+                if (itemsReceta.length === 0) {
+                    tbody.append('<tr id="filaVacia"><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-info-circle me-1"></i> Aún no se han agregado insumos a la receta.</td></tr>');
+                    return;
+                }
+
+                itemsReceta.forEach(function (item, index) {
+                    var tr = $('<tr></tr>');
+                    tr.append('<td><strong>' + item.NombreInsumo + '</strong></td>');
+                    tr.append('<td class="text-center fw-bold">' + item.cantidad_requerida + '</td>');
+                    tr.append('<td>' + (item.observaciones ? item.observaciones : '<span class="text-muted fst-italic">Sin observaciones</span>') + '</td>');
+                    tr.append('<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm btn-quitar" data-index="' + index + '"><i class="fas fa-times me-1"></i> Quitar</button></td>');
+                    tbody.append(tr);
+                });
+            }
+        });
+    </script>
+}

@@ -1,0 +1,173 @@
+﻿@model CapaModelo.CMCompra
+
+@{
+    ViewBag.Title = "Completar Compra";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-success text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-check-circle me-2"></i>Completar Compra</h4>
+        </div>
+
+        <div class="card-body">
+            @if (ViewBag.MostrarInfoStock)
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Información:</strong>
+                    <p class="mb-0 mt-2">
+                        @ViewBag.InfoStock
+                    </p>
+                </div>
+            }
+
+            <!-- Información de la compra -->
+            <div class="card border mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Compra #</label>
+                            <h5 class="fw-bold text-primary mb-0">@Model.id_compra</h5>
+                            @if (!string.IsNullOrEmpty(Model.Referencia))
+                            {
+                                <small class="text-muted">(@Model.Referencia)</small>
+                            }
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Proveedor</label>
+                            <p class="fw-bold mb-0">@Model.NombreProveedor</p>
+                            <small class="text-muted">@Model.DocumentoProveedor</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Fecha de Compra</label>
+                            <p class="fw-bold mb-0">@Model.FechaCompra.ToString("dd/MM/yyyy")</p>
+                            <small class="text-muted">@Model.FechaCompra.ToString("hh:mm tt")</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Estado Actual</label>
+                            <p class="mb-0">
+                                <span class="badge bg-warning text-dark">PENDIENTE</span>
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Monto Total</label>
+                            <h5 class="text-success fw-bold mb-0">Bs. @Model.MontoTotal.ToString("0.00")</h5>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Registrado por</label>
+                            <p class="fw-bold mb-0">@Model.NombreUsuario</p>
+                            <small class="text-muted">@Model.FechaRegistro.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="small text-muted">Detalles de la Compra</label>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th width="5%">#</th>
+                                            <th width="40%">Item</th>
+                                            <th width="15%" class="text-center">Tipo</th>
+                                            <th width="15%" class="text-center">Cantidad</th>
+                                            <th width="25%" class="text-end">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.Detalles != null && Model.Detalles.Any())
+                                        {
+                                            var contador = 1;
+                                            foreach (var detalle in Model.Detalles)
+                                            {
+                                                <tr>
+                                                    <td class="text-center">@contador</td>
+                                                    <td>
+                                                        <small>@detalle.NombreItem</small>
+                                                        @if (!string.IsNullOrEmpty(detalle.DescripcionItem))
+                                                        {
+                                                            <br />
+                                                            <small class="text-muted">@detalle.DescripcionItem</small>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">
+                                                        @if (detalle.TipoItem == "PRODUCTO")
+                                                        {
+                                                            <span class="badge bg-info">PRODUCTO</span>
+                                                        }
+                                                        else
+                                                        {
+                                                            <span class="badge bg-warning text-dark">INSUMO</span>
+                                                        }
+                                                    </td>
+                                                    <td class="text-center">@detalle.cantidad</td>
+                                                    <td class="text-end">Bs. @detalle.subtotal.ToString("0.00")</td>
+                                                </tr>
+                                                contador++;
+                                            }
+                                        }
+                                        <tr class="table-light">
+                                            <td colspan="4" class="text-end fw-bold">TOTAL:</td>
+                                            <td class="text-end fw-bold text-success">Bs. @Model.MontoTotal.ToString("0.00")</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Información adicional -->
+            <div class="alert alert-success">
+                <h5><i class="fas fa-check-circle me-2"></i>¿Qué sucede al completar la compra?</h5>
+                <ul class="mb-0">
+                    <li>El estado cambiará de <strong>PENDIENTE</strong> a <strong>COMPLETADA</strong></li>
+                    <li>Se actualizará el stock en la pollería activa</li>
+                    <li>Se registrará el movimiento en el historial de stock</li>
+                    <li>La compra quedará registrada como finalizada</li>
+                </ul>
+            </div>
+
+            @using (Html.BeginForm("ConfirmarCompletar", "Compra", new { id = Model.id_compra }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Observaciones (Opcional)</label>
+                    <textarea name="observaciones" class="form-control" rows="3"
+                              placeholder="Ingrese observaciones sobre la finalización de la compra..."></textarea>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-between">
+                    <div>
+                        @Html.ActionLink("Cancelar", "Details", new { id = Model.id_compra },
+                            new { @class = "btn btn-secondary px-4" })
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-success px-4" onclick="return confirmarCompletar()">
+                            <i class="fas fa-check-circle me-1"></i> Completar Compra
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript{
+    <script>
+        function confirmarCompletar() {
+            return confirm('¿Está seguro de marcar esta compra como COMPLETADA?\n\n' +
+                '✅ Esta acción actualizará el stock en la pollería.\n' +
+                '✅ El estado cambiará permanentemente.\n\n' +
+                '¿Desea continuar?');
+        }
+    </script>
+}

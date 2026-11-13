@@ -1,0 +1,9 @@
+﻿.field-validation-error {
+    color: #dc3545 !important;
+    display: block;
+    margin-top: 5px;
+}
+
+.input-validation-error {
+    border-color: #dc3545 !important;
+}

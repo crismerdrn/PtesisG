@@ -1,0 +1,78 @@
+﻿@model CapaModelo.CMTipoVenta
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-danger rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-trash-alt me-2"></i>Confirmar Eliminación</h4>
+        </div>
+
+        <div class="card-body">
+            <h5 class="text-danger mb-4">
+                ¿Está seguro que desea eliminar permanentemente el tipo de venta
+                <strong>@(Model?.nombre ?? "")</strong>?
+            </h5>
+
+            @using (Html.BeginForm("Delete", "TipoVenta", new { id = Model.id_tipoVenta },
+                FormMethod.Post, new { @id = "formDelete" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_tipoVenta)
+
+                <dl class="row border rounded p-3 bg-light">
+                    <dt class="col-sm-3">Nombre</dt>
+                    <dd class="col-sm-9">
+                        <strong>@Model.nombre</strong>
+                    </dd>
+
+                    <dt class="col-sm-3">Descripción</dt>
+                    <dd class="col-sm-9">
+                        @if (!string.IsNullOrEmpty(Model.descripcion))
+                        {
+                            <span>@Model.descripcion</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Sin descripción</span>
+                        }
+                    </dd>
+
+                    <dt class="col-sm-3">Estado Actual</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.estado)
+                        {
+                            <span class="badge bg-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactivo</span>
+                        }
+                    </dd>
+                </dl>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-danger me-2" id="btnEliminar">
+                        <i class="fas fa-trash-alt me-1"></i> Eliminar
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null,
+                        new { @class = "btn btn-secondary", @id = "btnCancelar" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var formDelete = document.getElementById('formDelete');
+        var btnEliminar = document.getElementById('btnEliminar');
+
+        if (formDelete && btnEliminar) {
+            formDelete.addEventListener('submit', function () {
+                btnEliminar.disabled = true;
+                btnEliminar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Eliminando...';
+            });
+        }
+    });
+</script>

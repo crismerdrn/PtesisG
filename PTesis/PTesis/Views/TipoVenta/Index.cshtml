@@ -1,0 +1,108 @@
+﻿@model List<CapaModelo.CMTipoVenta>
+
+<div class="container-fluid px-4">
+    <!-- Título SOLO -->
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-store me-2 text-primary"></i>Listado de Tipos de Venta</h2>
+    </div>
+
+    <!-- Botón Agregar Tipo de Venta debajo del título -->
+    @if (ViewBag.PuedeCrear == true || ViewBag.PuedeCrear == null)
+    {
+        <div class="mb-3">
+            @Html.ActionLink("Agregar Tipo de Venta", "Create", null, new { @class = "btn btn-primary shadow-sm" })
+        </div>
+    }
+
+    <!-- Tarjeta de búsqueda -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "TipoVenta")" class="row g-2 align-items-center">
+                <div class="col-md-9 col-lg-10">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar por nombre o descripción..." />
+                    </div>
+                </div>
+                <div class="col-md-3 col-lg-2 d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success w-50"><i class="fas fa-search me-1"></i> Buscar</button>
+                    <a href="@Url.Action("Index", "TipoVenta")" class="btn btn-secondary w-50"><i class="fas fa-undo me-1"></i> Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mensajes de alerta -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Tabla de tipos de venta -->
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th style="width: 25%;">Nombre</th>
+                    <th style="width: 45%;">Descripción</th>
+                    <th style="width: 15%;">Estado</th>
+                    <th style="width: 15%;" class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var tipoVenta in Model)
+                    {
+                        <tr>
+                            <td class="fw-bold">@tipoVenta.nombre</td>
+                            <td>@tipoVenta.descripcion</td>
+                            <td>
+                                @if (tipoVenta.estado)
+                                {
+                                    <span class="badge bg-success"><i class="fas fa-check me-1"></i>Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Inactivo</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    @if (ViewBag.PuedeEditar == true || ViewBag.PuedeEditar == null)
+                                    {
+                                        @Html.ActionLink("Editar", "Edit", new { id = tipoVenta.id_tipoVenta }, new { @class = "btn btn-warning btn-sm" })
+                                    }
+                                    @if (ViewBag.PuedeEliminar == true || ViewBag.PuedeEliminar == null)
+                                    {
+                                        @Html.ActionLink("Eliminar", "Delete", new { id = tipoVenta.id_tipoVenta }, new { @class = "btn btn-danger btn-sm ms-1" })
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br />
+                            No se encontraron tipos de venta
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

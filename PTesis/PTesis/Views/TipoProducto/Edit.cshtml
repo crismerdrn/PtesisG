@@ -1,0 +1,113 @@
+﻿@model CapaModelo.CMTipoProducto
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-light border-0 rounded-top-4">
+            <h4 class="mb-0 text-dark"><i class="fas fa-edit me-2"></i>Editar Tipo de Producto</h4>
+            <small class="text-muted">ID: @Model.id_tipoProducto</small>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm("Edit", "TipoProducto", new { id = Model.id_tipoProducto },
+                FormMethod.Post, new { @class = "needs-validation", @novalidate = "novalidate", @id = "formEdit" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_tipoProducto)
+                @Html.HiddenFor(m => m.fecha_registro)
+
+                @Html.ValidationSummary(true, "", new { @class = "alert alert-danger", @role = "alert" })
+
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.descripcion,
+                                new
+                                     {
+                                    @class = "form-control",
+                                    placeholder = "Descripción",
+                                    maxlength = "100",
+                                    required = "required",
+                                    @id = "descripcionEdit"
+                                })
+                            @Html.LabelFor(m => m.descripcion, new { @for = "descripcionEdit" })
+                            <div class="invalid-feedback">
+                                Por favor ingrese una descripción válida.
+                            </div>
+                            @Html.ValidationMessageFor(m => m.descripcion, "", new { @class = "text-danger small mt-1" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mt-3">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.estado,
+                                new
+                                     {
+                                    @class = "form-check-input",
+                                    @id = "estadoCheckEdit",
+                                    @role = "switch"
+                                })
+                            <label class="form-check-label" for="estadoCheckEdit">
+                                Tipo de Producto Activo
+                            </label>
+                            <div class="form-text">
+                                Cuando está inactivo, no podrá ser seleccionado en nuevos productos.
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Información del registro:</strong><br />
+                            <small>
+                                Creado el: @Model.fecha_registro.ToString("dd/MM/yyyy HH:mm")
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-primary me-2" id="btnActualizar">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver", "Index", null,
+                        new { @class = "btn btn-secondary", @id = "btnVolverEdit" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    // Validación específica para edición
+    document.addEventListener('DOMContentLoaded', function() {
+        var formEdit = document.getElementById('formEdit');
+        var descripcionEdit = document.getElementById('descripcionEdit');
+
+        if (formEdit && descripcionEdit) {
+            // Prevenir edición si el ID es inválido
+            var idInput = document.querySelector('input[name="id_tipoProducto"]');
+            if (idInput && (idInput.value <= 0 || isNaN(idInput.value))) {
+                mostrarErrorModal('ID de tipo de producto inválido. No se puede editar.');
+                formEdit.querySelector('button[type="submit"]').disabled = true;
+            }
+
+                // Deshabilitar botón para evitar doble envío
+                var btnActualizar = document.getElementById('btnActualizar');
+                if (btnActualizar) {
+                    btnActualizar.disabled = true;
+                    btnActualizar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Actualizando...';
+                }
+
+                return true;
+            });
+        }
+
+        function mostrarErrorModal(mensaje) {
+            // Puedes implementar un modal de Bootstrap o usar alert
+            alert('Error: ' + mensaje);
+        }
+    });
+</script>

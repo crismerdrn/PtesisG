@@ -1,0 +1,156 @@
+﻿@model List<CapaModelo.CMPermisos>
+@{
+    ViewBag.Title = "Mantenimiento de Permisos";
+}
+
+<div class="container-fluid px-4">
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3">@TempData["Success"]</div>
+    }
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3">@TempData["Error"]</div>
+    }
+
+<div class="mt-4 mb-3">
+    <h2 class="fw-bold mb-3"><i class="fas fa-lock me-2 text-primary"></i>Mantenimiento de Permisos</h2>
+    @Html.ActionLink("Nuevo Permiso", "Create", null, new { @class = "btn btn-primary" })
+</div>
+
+    <!-- Búsqueda -->
+    <div class="card shadow-sm border-0 mb-4 mt-3">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Mantenimiento")" class="row g-2">
+                <div class="col-md-9">
+                    <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar por nombre, módulo o descripción..." />
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-success w-100"><i class="fas fa-search me-1"></i> Buscar</button>
+                    <a href="@Url.Action("Mantenimiento")" class="btn btn-secondary w-100"><i class="fas fa-undo me-1"></i> Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Módulo</th>
+                            <th>Tipo</th>
+                            <th>Padre</th>
+                            <th>Orden</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @{
+                            var modulos = Model.Where(p => p.Padre_id == null)
+                                               .OrderBy(p => p.Orden ?? 999)
+                                               .ThenBy(p => p.NombreMenu)
+                                               .ToList();
+                        }
+
+                        @if (modulos.Any())
+                        {
+                            foreach (var modulo in modulos)
+                            {
+                                // ====== NIVEL 1: Módulo principal ======
+                                <tr class="table-primary">
+                                    <td><span class="badge bg-secondary">@modulo.Modulo</span></td>
+                                    <td><span class="badge bg-dark">Nivel 1 - Módulo</span></td>
+                                    <td class="text-muted">—</td>
+                                    <td class="text-center">@modulo.Orden</td>
+                                    <td class="text-center">
+                                        <a href="@Url.Action("Edit", new { id = modulo.id_permiso })"
+                                           class="btn btn-warning btn-sm">
+                                            <i class="fas fa-pencil-alt"></i> Editar
+                                        </a>
+                                        <a href="@Url.Action("Delete", new { id = modulo.id_permiso })"
+                                           class="btn btn-danger btn-sm ms-1">
+                                            <i class="fas fa-trash"></i> Eliminar
+                                        </a>
+                                    </td>
+                                </tr>
+
+                                // ====== NIVEL 2: Submenús ======
+                                var submenus = Model.Where(p => p.Padre_id == modulo.id_permiso
+                                                             && p.Tipo == "MENU")
+                                                    .OrderBy(p => p.Orden ?? 999)
+                                                    .ToList();
+
+                                foreach (var sub in submenus)
+                                {
+                                    <tr class="table-light">
+                                        <td class="ps-4">
+                                            <i class="fas fa-angle-right text-muted me-2"></i>
+                                            @sub.NombreMenu
+                                        </td>
+                                        <td><span class="badge bg-secondary">@sub.Modulo</span></td>
+                                        <td><span class="badge bg-info text-dark">Nivel 2 - Submenú</span></td>
+                                        <td class="text-muted">@modulo.NombreMenu</td>
+                                        <td class="text-center">@sub.Orden</td>
+                                        <td class="text-center">
+                                            <a href="@Url.Action("Edit", new { id = sub.id_permiso })"
+                                               class="btn btn-warning btn-sm">
+                                                <i class="fas fa-pencil-alt"></i> Editar
+                                            </a>
+                                            <a href="@Url.Action("Delete", new { id = sub.id_permiso })"
+                                               class="btn btn-danger btn-sm ms-1">
+                                                <i class="fas fa-trash"></i> Eliminar
+                                            </a>
+                                        </td>
+                                    </tr>
+
+                                    // ====== NIVEL 3: Acciones ======
+                                    var acciones = Model.Where(p => p.Padre_id == sub.id_permiso
+                                                                  && p.Tipo == "ACCION")
+                                                        .OrderBy(p => p.Orden ?? 999)
+                                                        .ToList();
+
+                                    foreach (var accion in acciones)
+                                    {
+                                        <tr>
+                                            <td class="ps-5">
+                                                <i class="fas fa-cog text-muted me-2"></i>
+                                                @accion.NombreMenu
+                                            </td>
+                                            <td><span class="badge bg-secondary">@accion.Modulo</span></td>
+                                            <td><span class="badge bg-warning text-dark">Nivel 3 - Acción</span></td>
+                                            <td class="text-muted">@sub.NombreMenu</td>
+                                            <td class="text-center">@accion.Orden</td>
+                                            <td class="text-center">
+                                                <a href="@Url.Action("Edit", new { id = accion.id_permiso })"
+                                                   class="btn btn-warning btn-sm">
+                                                    <i class="fas fa-pencil-alt"></i> Editar
+                                                </a>
+                                                <a href="@Url.Action("Delete", new { id = accion.id_permiso })"
+                                                   class="btn btn-danger btn-sm ms-1">
+                                                    <i class="fas fa-trash"></i> Eliminar
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center py-4 text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No hay permisos registrados
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

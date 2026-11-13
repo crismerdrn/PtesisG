@@ -1,0 +1,200 @@
+﻿@model List<CapaModelo.CMStockInsumo>
+@{
+    ViewBag.Title = "Stock de Insumos";
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-flask me-2 text-primary"></i>Stock de Insumos</h2>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="btn-group shadow-sm" role="group">
+                @Html.ActionLink("Productos", "Productos", "Stock", null, new { @class = "btn btn-outline-primary" })
+                @Html.ActionLink("Insumos", "Insumos", "Stock", null, new { @class = "btn btn-primary" })
+                @Html.ActionLink("Stock Bajo", "StockBajo", "Stock", new { tipo = "insumos" }, new { @class = "btn btn-outline-warning" })
+                @Html.ActionLink("Historial", "Historial", "Stock", null, new { @class = "btn btn-outline-info" })
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            @if (ViewBag.PuedeAjustar)
+            {
+                <a href="@Url.Action("AjustarInsumo", "Stock")" class="btn btn-danger shadow-sm">
+                    <i class="fas fa-adjust me-1"></i> Ajustar Stock
+                </a>
+            }
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Insumos", "Stock")" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar insumo..." />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="id_polleria" class="form-select">
+                        <option value="">Todas las Pollerías</option>
+                        @if (ViewBag.Pollerias != null)
+                        {
+                            foreach (var item in (List<SelectListItem>)ViewBag.Pollerias)
+                            {
+                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-3 d-flex gap-2">
+                    <button type="submit" class="btn btn-success w-50"><i class="fas fa-filter me-1"></i> Filtrar</button>
+                    <a href="@Url.Action("Insumos", "Stock")" class="btn btn-secondary w-50"><i class="fas fa-undo me-1"></i> Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-4">
+            <div class="card bg-primary text-white shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-flask fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.Count</h5>
+                            <small>Insumos en Stock</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-warning text-dark shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-exclamation-triangle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.Count(x => x.estado_stock == "BAJO")</h5>
+                            <small>Stock Bajo</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card bg-danger text-white shadow-sm">
+                <div class="card-body py-3">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <i class="fas fa-times-circle fa-2x"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0">@Model.Count(x => x.estado_stock == "AGOTADO")</h5>
+                            <small>Agotados</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Insumo</th>
+                    <th class="text-center">Polleria</th>
+                    <th class="text-center">Stock Actual</th>
+                    <th class="text-center">Stock Mínimo</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Último Movimiento</th>
+                    <th class="text-center">Medida</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var stock in Model)
+                    {
+                        <tr>
+                            <td>
+                                <div class="fw-bold">@stock.insumo_nombre</div>
+                                <small class="text-muted">@stock.insumo_descripcion</small>
+                            </td>
+                            <td class="text-center">@stock.polleria_nombre</td>
+                            <td class="text-center fw-bold">@stock.stock_actual.ToString("N2") @stock.abreviatura</td>
+                            <td class="text-center">@stock.stock_minimo.ToString("N2") @stock.abreviatura</td>
+                            <td class="text-center">
+                                @if (stock.estado_stock == "NORMAL")
+                                {
+                                    <span class="badge bg-success">Normal</span>
+                                }
+                                else if (stock.estado_stock == "BAJO")
+                                {
+                                    <span class="badge bg-warning">Bajo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Agotado</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @stock.Fecha_ultimo_movimiento.ToString("dd/MM/yyyy HH:mm")
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-secondary">@stock.medida</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="@Url.Action("AjustarInsumo", "Stock", new { id = stock.id_stock_insumo })"
+                                       class="btn btn-sm btn-outline-primary" title="Ajustar Stock">
+                                        <i class="fas fa-adjust"></i>
+                                    </a>
+                                    <a href="@Url.Action("ConfigurarMinimo", "Stock", new {
+                                            id = stock.id_stock_insumo,
+                                            tipo = "insumo"
+                                          })"
+                                       class="btn btn-sm btn-outline-warning ms-1" title="Configurar Mínimo">
+                                        <i class="fas fa-cog"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br />
+                            No se encontraron insumos en stock
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

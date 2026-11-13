@@ -1,0 +1,190 @@
+﻿@model List<CapaModelo.CMPolleria>
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-store me-2 text-primary"></i>Gestión de Pollerías
+        </h2>
+        <p class="text-muted">Administre las pollerías del sistema</p>
+    </div>
+
+    @if (ViewBag.PuedeCrear == true)
+    {
+        <div class="mb-3">
+            @Html.ActionLink("Nueva Pollería", "Create", null, new { @class = "btn btn-primary shadow-sm" })
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "Polleria")" class="row g-3">
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text"
+                               name="buscar"
+                               value="@ViewBag.Buscar"
+                               class="form-control"
+                               placeholder="Buscar por nombre, dirección o teléfono" />
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="mb-3 d-flex justify-content-end">
+        <div class="btn-group shadow-sm" role="group">
+            <a href="@Url.Action("Index", new { estado = (bool?)null })"
+               class="btn btn-outline-secondary btn-sm @(ViewBag.EstadoFiltro == null ? "active" : "")">
+                <i class="fas fa-list me-1"></i> Todas
+            </a>
+            <a href="@Url.Action("Index", new { estado = true })"
+               class="btn btn-outline-success btn-sm @(ViewBag.EstadoFiltro == true ? "active" : "")">
+                <i class="fas fa-check me-1"></i> Solo Activas
+            </a>
+            <a href="@Url.Action("Index", new { estado = false })"
+               class="btn btn-outline-danger btn-sm @(ViewBag.EstadoFiltro == false ? "active" : "")">
+                <i class="fas fa-ban me-1"></i> Solo Inactivas
+            </a>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="alert alert-info">
+            <i class="fas fa-info-circle me-2"></i>
+            Mostrando @Model.Count pollería(s)
+            @if (ViewBag.EstadoFiltro == true)
+            {
+                <span class="badge bg-success ms-2">Activas</span>
+            }
+            else if (ViewBag.EstadoFiltro == false)
+            {
+                <span class="badge bg-danger ms-2">Inactivas</span>
+            }
+        </div>
+    }
+
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Dirección</th>
+                    <th>Teléfono</th>
+                    <th>Estado</th>
+                    <th>Fecha Registro</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var polleria in Model)
+                    {
+                        <tr>
+                            <td><strong>@polleria.Nombre</strong></td>
+                            <td>@polleria.Direccion</td>
+                            <td>@polleria.Telefono</td>
+                            <td>
+                                @if (polleria.Estado)
+                                {
+                                    <span class="badge bg-success">Activa</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactiva</span>
+                                }
+                            </td>
+                            <td>@polleria.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    @if (ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Edit", new { id = polleria.id_polleria })"
+                                           class="btn btn-warning"
+                                           title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    }
+
+                                    @if (!polleria.Estado && ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Activar", new { id = polleria.id_polleria })"
+                                           class="btn btn-outline-success"
+                                           title="Activar"
+                                           onclick="return confirm('¿Está seguro que desea activar esta pollería?')">
+                                            <i class="fas fa-check"></i>
+                                        </a>
+                                    }
+
+                                    @if (polleria.Estado && ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Desactivar", new { id = polleria.id_polleria })"
+                                           class="btn btn-outline-warning"
+                                           title="Desactivar"
+                                           onclick="return confirm('¿Está seguro que desea desactivar esta pollería?')">
+                                            <i class="fas fa-ban"></i>
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEliminar == true)
+                                    {
+                                        <a href="@Url.Action("Delete", new { id = polleria.id_polleria })"
+                                           class="btn btn-outline-danger"
+                                           title="Eliminar">
+                                            <i class="fas fa-trash"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-store-slash fa-3x mb-3"></i>
+                            <h5>No se encontraron pollerías</h5>
+                            @if (!string.IsNullOrEmpty(ViewBag.Buscar as string))
+                            {
+                                <p>No hay resultados para: <strong>@ViewBag.Buscar</strong></p>
+                                <a href="@Url.Action("Index")" class="btn btn-primary mt-2">
+                                    <i class="fas fa-undo me-1"></i> Ver todas
+                                </a>
+                            }
+                            else if (ViewBag.PuedeCrear == true)
+                            {
+                                @Html.ActionLink("Registrar primera pollería", "Create", null, new { @class = "btn btn-primary mt-2" })
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

@@ -1,0 +1,72 @@
+﻿@model CapaModelo.CMMedida
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Medida</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm("Edit", "Medida", FormMethod.Post, new { id = "formEdit" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_medida)
+                @Html.HiddenFor(m => m.FechaRegistro)
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Descripcion, new { @class = "form-control", placeholder = "Descripción", maxlength = "100" })
+                            @Html.LabelFor(m => m.Descripcion)
+                            @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Abreviatura, new { @class = "form-control", placeholder = "Abreviatura", maxlength = "20" })
+                            @Html.LabelFor(m => m.Abreviatura)
+                            @Html.ValidationMessageFor(m => m.Abreviatura, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mt-3">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.Estado, new { @class = "form-check-input", id = "estadoCheck" })
+                            <label class="form-check-label fw-bold" for="estadoCheck">
+                                Medida Activa
+                            </label>
+                            @Html.ValidationMessageFor(m => m.Estado, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-primary me-2" id="btnActualizar">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver al Listado", "Index", null, new { @class = "btn btn-secondary", @id = "btnVolver" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('formEdit');
+        var btnActualizar = document.getElementById('btnActualizar');
+
+        if (form && btnActualizar) {
+            form.addEventListener('submit', function () {
+                if ($(form).valid()) {
+                    btnActualizar.disabled = true;
+                    btnActualizar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Actualizando...';
+                }
+            });
+        }
+    });
+</script>

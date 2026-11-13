@@ -1,0 +1,207 @@
+﻿@model CapaModelo.CMProveedor
+@{
+    ViewBag.Title = "Editar Proveedor";
+}
+
+<div class="container-fluid px-4">
+    <!-- Mensajes de error general -->
+    @if (ViewData.ModelState.Any(x => x.Value.Errors.Any()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @Html.ValidationSummary(true, "", new { @class = "mb-0" })
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Proveedor</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_proveedor)
+
+                @Html.HiddenFor(m => m.esEmpresa)
+
+                <!-- Tipo de Proveedor (solo lectura) -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Tipo de Proveedor:</label>
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            Este proveedor está registrado como
+                            <strong>@(Model.esEmpresa ? "Empresa" : "Persona Natural")</strong>.
+                            El tipo no se puede cambiar después del registro.
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    @if (Model.esEmpresa)
+                    {
+                        <!-- Campos para Empresa -->
+                        <div class="col-md-12">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.RazonSocial,
+                                    new
+                                    {
+                                        @class = "form-control" + (ViewData.ModelState["RazonSocial"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                        placeholder = "Razón Social",
+                                        maxlength = "250"
+                                    })
+                                @Html.LabelFor(m => m.RazonSocial)
+                                @Html.ValidationMessageFor(m => m.RazonSocial, "", new { @class = "invalid-feedback d-block" })
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.NIT,
+                                    new
+                                    {
+                                        @class = "form-control" + (ViewData.ModelState["NIT"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                        placeholder = "NIT",
+                                        maxlength = "50"
+                                    })
+                                @Html.LabelFor(m => m.NIT)
+                                @Html.ValidationMessageFor(m => m.NIT, "", new { @class = "invalid-feedback d-block" })
+                            </div>
+                        </div>
+
+                        <!-- Campos de persona ocultos pero necesarios para el modelo -->
+                        @Html.HiddenFor(m => m.Nombre)
+                        @Html.HiddenFor(m => m.Apellido)
+                        @Html.HiddenFor(m => m.CI)
+                    }
+                    else
+                    {
+                        <!-- Campos para Persona -->
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.Nombre,
+                                    new
+                                    {
+                                        @class = "form-control" + (ViewData.ModelState["Nombre"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                        placeholder = "Nombre",
+                                        maxlength = "250"
+                                    })
+                                @Html.LabelFor(m => m.Nombre)
+                                @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "invalid-feedback d-block" })
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.Apellido,
+                                    new
+                                    {
+                                        @class = "form-control" + (ViewData.ModelState["Apellido"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                        placeholder = "Apellido",
+                                        maxlength = "250"
+                                    })
+                                @Html.LabelFor(m => m.Apellido)
+                                @Html.ValidationMessageFor(m => m.Apellido, "", new { @class = "invalid-feedback d-block" })
+                            </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.CI,
+                                    new
+                                    {
+                                        @class = "form-control" + (ViewData.ModelState["CI"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                        placeholder = "CI",
+                                        maxlength = "250"
+                                    })
+                                @Html.LabelFor(m => m.CI)
+                                @Html.ValidationMessageFor(m => m.CI, "", new { @class = "invalid-feedback d-block" })
+                            </div>
+                        </div>
+
+                        <!-- Campos de empresa ocultos pero necesarios para el modelo -->
+                        @Html.HiddenFor(m => m.RazonSocial)
+                        @Html.HiddenFor(m => m.NIT)
+                    }
+
+                    <!-- Campos comunes -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Telefono,
+                                new
+                                {
+                                    @class = "form-control" + (ViewData.ModelState["Telefono"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Teléfono",
+                                    maxlength = "250"
+                                })
+                            @Html.LabelFor(m => m.Telefono)
+                            @Html.ValidationMessageFor(m => m.Telefono, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Email,
+                                new
+                                {
+                                    @class = "form-control" + (ViewData.ModelState["Email"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Email",
+                                    type = "email",
+                                    maxlength = "250"
+                                })
+                            @Html.LabelFor(m => m.Email)
+                            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.Direccion,
+                                new
+                                {
+                                    @class = "form-control" + (ViewData.ModelState["Direccion"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Dirección",
+                                    maxlength = "250",
+                                    rows = "3"
+                                })
+                            @Html.LabelFor(m => m.Direccion)
+                            @Html.ValidationMessageFor(m => m.Direccion, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <!-- Estado -->
+                    <div class="col-12 mt-3">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.Estado, new { @class = "form-check-input", role = "switch" })
+                            @Html.LabelFor(m => m.Estado, new { @class = "form-check-label fw-bold" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-warning px-4">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary px-4" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script src="~/Scripts/validacion-proveedor.js?v=@DateTime.Now.Ticks"></script>
+    <script>
+        $(document).ready(function () {
+            inicializarFormularioProveedor({
+                urlVerificarDuplicado: '@Url.Action("VerificarDuplicado", "Proveedor")',
+                idExcluir: @Model.id_proveedor
+            });
+        });
+    </script>
+}

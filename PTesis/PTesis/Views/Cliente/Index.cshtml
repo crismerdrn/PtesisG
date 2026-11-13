@@ -1,0 +1,297 @@
+﻿@model PagedList.IPagedList<CapaModelo.CMClientes>
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-users me-2 text-primary"></i>Gestión de Clientes
+        </h2>
+    </div>
+
+    <!-- Botón Nuevo Cliente -->
+    @if (ViewBag.PuedeCrear == true)
+    {
+        <div class="mb-3">
+            @Html.ActionLink(
+                "Nuevo Cliente",
+                "Create",
+                null,
+                new { @class = "btn btn-primary shadow-sm" }
+            )
+        </div>
+    }
+
+    <!-- Buscador -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "Cliente")" class="row g-3">
+                <input type="hidden" name="estado" value="@ViewBag.EstadoFiltro" />
+                <div class="col-md-9">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-search"></i>
+                        </span>
+                        <input type="text"
+                               name="buscar"
+                               value="@ViewBag.Buscar"
+                               class="form-control"
+                               placeholder="Buscar por nombre, apellido, teléfono o email" />
+                    </div>
+                </div>
+                <div class="col-md-3 d-flex gap-2 align-items-end">
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                    @if (!string.IsNullOrEmpty(ViewBag.Buscar as string) || ViewBag.EstadoFiltro != null)
+                    {
+                        <a href="@Url.Action("Index", "Cliente")" class="btn btn-secondary" title="Limpiar filtros">
+                            <i class="fas fa-undo"></i>
+                        </a>
+                    }
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Filtros de Estado -->
+    <div class="mb-3 d-flex justify-content-end">
+        <div class="btn-group shadow-sm" role="group">
+            <a href="@Url.Action("Index", new { buscar = ViewBag.Buscar, estado = (bool?)null })"
+               class="btn btn-outline-secondary btn-sm @(ViewBag.EstadoFiltro == null ? "active" : "")">
+                <i class="fas fa-list me-1"></i> Todos
+            </a>
+            <a href="@Url.Action("Index", new { buscar = ViewBag.Buscar, estado = true })"
+               class="btn btn-outline-success btn-sm @(ViewBag.EstadoFiltro == true ? "active" : "")">
+                <i class="fas fa-check me-1"></i> Solo Activos
+            </a>
+            <a href="@Url.Action("Index", new { buscar = ViewBag.Buscar, estado = false })"
+               class="btn btn-outline-danger btn-sm @(ViewBag.EstadoFiltro == false ? "active" : "")">
+                <i class="fas fa-ban me-1"></i> Solo Inactivos
+            </a>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre Completo</th>
+                    <th>Teléfono</th>
+                    <th>Email</th>
+                    <th>Dirección</th>
+                    <th>Estado</th>
+                    <th>Fecha Registro</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var cliente in Model)
+                    {
+                        <tr>
+                            <td><strong>@cliente.Apellido</strong>, @cliente.Nombre</td>
+                            <td>@cliente.Telefono</td>
+                            <td>@(string.IsNullOrEmpty(cliente.Email) ? "-" : cliente.Email)</td>
+                            <td>@(string.IsNullOrEmpty(cliente.Direccion) ? "-" : cliente.Direccion)</td>
+                            <td>
+                                @if (cliente.Estado)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td>@cliente.FechaRegistro.ToString("dd/MM/yyyy")</td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm" role="group">
+                                    @if (ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Edit", new { id = cliente.id_cliente })"
+                                           class="btn btn-warning"
+                                           title="Editar cliente">
+                                            <i class="fas fa-edit"></i>
+                                        </a>
+                                    }
+
+                                    @if (cliente.Estado && ViewBag.PuedeEliminar == true)
+                                    {
+                                        <a href="@Url.Action("Delete", new { id = cliente.id_cliente })"
+                                           class="btn btn-outline-danger"
+                                           title="Desactivar cliente">
+                                            <i class="fas fa-user-slash"></i>
+                                        </a>
+                                    }
+
+                                    @if (!cliente.Estado && ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Activar", new { id = cliente.id_cliente })"
+                                           class="btn btn-outline-success"
+                                           title="Activar cliente"
+                                           onclick="return confirm('¿Está seguro que desea activar este cliente?')">
+                                            <i class="fas fa-user-check"></i>
+                                        </a>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-user-slash fa-3x mb-3"></i>
+                            <h5>No se encontraron clientes</h5>
+
+                            @if (!string.IsNullOrEmpty(ViewBag.Buscar as string))
+                            {
+                                <p>
+                                    No hay resultados para la búsqueda:
+                                    <strong>@ViewBag.Buscar</strong>
+                                </p>
+
+                                <a href="@Url.Action("Index")" class="btn btn-primary mt-2">
+                                    <i class="fas fa-undo me-1"></i> Ver todos los clientes
+                                </a>
+                            }
+                            else if (ViewBag.PuedeCrear == true)
+                            {
+                                @Html.ActionLink(
+                                    "Registrar primer cliente",
+                                    "Create",
+                                    null,
+                                    new { @class = "btn btn-primary mt-2" }
+                                )
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- PAGINACIÓN -->
+@if (Model != null && Model.TotalItemCount > 0)
+{
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="d-flex justify-content-center">
+                @if (Model.PageCount > 1)
+                {
+                    <ul class="pagination">
+                        <!-- Botón Anterior -->
+                        @if (Model.HasPreviousPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("Index", new {
+                                    pagina = Model.PageNumber - 1,
+                                    buscar = ViewBag.Buscar,
+                                    estado = ViewBag.EstadoFiltro
+                                })">
+                                    <i class="fas fa-chevron-left"></i> Anterior
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link"><i class="fas fa-chevron-left"></i> Anterior</span>
+                            </li>
+                        }
+
+                        <!-- Números de página -->
+                        @for (int i = 1; i <= Model.PageCount; i++)
+                        {
+                            if (i == 1 || i == Model.PageCount || (i >= Model.PageNumber - 2 && i <= Model.PageNumber + 2))
+                            {
+                                if (i == Model.PageNumber)
+                                {
+                                    <li class="page-item active">
+                                        <span class="page-link">@i</span>
+                                    </li>
+                                }
+                                else
+                                {
+                                    <li class="page-item">
+                                        <a class="page-link" href="@Url.Action("Index", new {
+                                            pagina = i,
+                                            buscar = ViewBag.Buscar,
+                                            estado = ViewBag.EstadoFiltro
+                                        })">@i</a>
+                                    </li>
+                                }
+                            }
+                            else if ((i == Model.PageNumber - 3 && Model.PageNumber > 3) ||
+                                     (i == Model.PageNumber + 3 && Model.PageNumber < Model.PageCount - 2))
+                            {
+                                <li class="page-item disabled">
+                                    <span class="page-link">...</span>
+                                </li>
+                            }
+                        }
+
+                        <!-- Botón Siguiente -->
+                        @if (Model.HasNextPage)
+                        {
+                            <li class="page-item">
+                                <a class="page-link" href="@Url.Action("Index", new {
+                                    pagina = Model.PageNumber + 1,
+                                    buscar = ViewBag.Buscar,
+                                    estado = ViewBag.EstadoFiltro
+                                })">
+                                    Siguiente <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">Siguiente <i class="fas fa-chevron-right"></i></span>
+                            </li>
+                        }
+                    </ul>
+                }
+            </div>
+
+            <!-- Información de registros -->
+            <div class="text-center text-muted small mt-2">
+                <i class="fas fa-chart-line me-1"></i>
+                Mostrando <strong>@Model.FirstItemOnPage</strong> a <strong>@Model.LastItemOnPage</strong>
+                de <strong>@Model.TotalItemCount</strong> clientes
+                @if (!string.IsNullOrEmpty(ViewBag.Buscar as string))
+                {
+                    <span class="ms-2 badge bg-info">Filtrado por: "@ViewBag.Buscar"</span>
+                }
+                @if (ViewBag.EstadoFiltro == true)
+                {
+                    <span class="ms-2 badge bg-success">Solo Activos</span>
+                }
+                else if (ViewBag.EstadoFiltro == false)
+                {
+                    <span class="ms-2 badge bg-danger">Solo Inactivos</span>
+                }
+            </div>
+        </div>
+    </div>
+}

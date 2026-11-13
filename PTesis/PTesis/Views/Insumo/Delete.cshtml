@@ -1,0 +1,73 @@
+﻿@model CapaModelo.CMInsumo
+
+@{
+    ViewBag.Title = "Eliminar Insumo";
+}
+
+<div class="container-fluid px-4">
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-danger rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-trash-alt me-2"></i>Confirmar Eliminación</h4>
+        </div>
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Atención:</strong> Si este insumo tiene historial de compras o stock, no se eliminará físicamente, solo cambiará a estado <strong>Inactivo</strong>.
+            </div>
+
+            <h5 class="text-danger mb-4">¿Está seguro que desea eliminar el insumo <strong class="text-dark">"@Model.nombre"</strong>?</h5>
+
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_insumo)
+
+                <div class="card bg-light">
+                    <div class="card-body">
+                        <dl class="row mb-0">
+                            <dt class="col-sm-3">Nombre</dt>
+                            <dd class="col-sm-9 fw-bold">@Model.nombre</dd>
+
+                            <dt class="col-sm-3">Medida</dt>
+                            <dd class="col-sm-9">
+                                @(!string.IsNullOrEmpty(Model.NombreMedida) ? Model.NombreMedida : "-")
+                            </dd>
+
+                            <dt class="col-sm-3">Descripción</dt>
+                            <dd class="col-sm-9">
+                                @(!string.IsNullOrEmpty(Model.descripcion) ? Model.descripcion : "Sin descripción")
+                            </dd>
+
+                            <dt class="col-sm-3">Estado Actual</dt>
+                            <dd class="col-sm-9">
+                                @if (Model.estado)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <div class="mt-4 d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-danger px-4">
+                        <i class="fas fa-check-circle me-2"></i>Confirmar
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary px-4" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

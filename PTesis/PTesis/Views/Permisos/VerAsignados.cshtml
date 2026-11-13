@@ -1,0 +1,87 @@
+﻿@model List<CapaModelo.CMRolPermiso>
+@{
+    ViewBag.Title = "Permisos Asignados";
+    var rol = ViewBag.Rol as CapaModelo.CMRol;
+    string nombreRol = rol != null ? rol.Nombre : "Rol no definido";
+    int idRol = rol != null ? rol.id_rol : 0;
+}
+
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-eye me-2 text-info"></i>
+            Permisos Asignados - @nombreRol
+        </h2>
+        <div>
+            <a href="@Url.Action("Asignar", "Permisos", new { id = idRol })" class="btn btn-primary">
+                <i class="fas fa-edit me-1"></i> Editar Permisos
+            </a>
+            <a href="@Url.Action("Index", "Rol")" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-3">
+        <div class="card-header bg-info text-white">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Listado de Permisos (@Model.Count)</h5>
+        </div>
+        <div class="card-body">
+            @if (Model.Any())
+            {
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Permiso</th>
+                                <th>Módulo</th>
+                                <th>Tipo</th>
+                                <th>Fecha Asignación</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model)
+                            {
+                                <tr>
+                                    <td>@item.PermisoNombre</td>
+                                    <td><span class="badge bg-secondary">@item.RolNombre</span></td>
+                                    <td>
+                                        @if (item.PermisoNombre.Contains("Ver"))
+                                        {
+                                            <span class="badge bg-success">Ver</span>
+                                        }
+                                        else if (item.PermisoNombre.Contains("Agregar"))
+                                        {
+                                            <span class="badge bg-primary">Agregar</span>
+                                        }
+                                        else if (item.PermisoNombre.Contains("Editar"))
+                                        {
+                                            <span class="badge bg-warning">Editar</span>
+                                        }
+                                        else if (item.PermisoNombre.Contains("Eliminar"))
+                                        {
+                                            <span class="badge bg-danger">Eliminar</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">Menú</span>
+                                        }
+                                    </td>
+                                    <td>@item.FechaAsignacion.ToString("dd/MM/yyyy HH:mm")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Este rol no tiene permisos asignados.
+                    <a href="@Url.Action("Asignar", "Permisos", new { id = rol?.id_rol })" class="alert-link">Asignar permisos ahora</a>.
+                </div>
+            }
+        </div>
+    </div>
+</div>

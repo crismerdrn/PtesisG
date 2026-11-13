@@ -1,0 +1,135 @@
+﻿@model List<CapaModelo.CMStock>
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-exclamation-triangle me-2 text-warning"></i>Productos con Stock Bajo</h2>
+        <p class="text-muted">Productos que requieren atención por bajo stock</p>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <div class="btn-group shadow-sm" role="group">
+                @Html.ActionLink("Productos", "StockBajo", "Stock", new { tipo = "productos" }, new { @class = "btn btn-warning" })
+                @Html.ActionLink("Insumos", "StockBajo", "Stock", new { tipo = "insumos" }, new { @class = "btn btn-outline-warning" })
+            </div>
+        </div>
+        <div class="col-md-4">
+            <a href="@Url.Action("Productos", "Stock")" class="btn btn-primary float-end">
+                <i class="fas fa-arrow-left me-1"></i> Volver al Stock
+            </a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("StockBajo", "Stock")" class="row g-3 align-items-center">
+                <input type="hidden" name="tipo" value="productos" />
+                <div class="col-md-8">
+                    <select name="id_polleria" class="form-select">
+                        <option value="">Todas las Pollerías</option>
+                        @if (ViewBag.Pollerias != null)
+                        {
+                            foreach (var item in (List<SelectListItem>)ViewBag.Pollerias)
+                            {
+                                <option value="@item.Value" selected="@item.Selected">@item.Text</option>
+                            }
+                        }
+                    </select>
+                </div>
+                <div class="col-md-4 d-flex gap-2">
+                    <button type="submit" class="btn btn-success w-50"><i class="fas fa-filter me-1"></i> Filtrar</button>
+                    <a href="@Url.Action("StockBajo", "Stock", new { tipo = "productos" })" class="btn btn-secondary w-50">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (Model != null && Model.Any())
+    {
+        <div class="alert alert-warning" role="alert">
+            <i class="fas fa-info-circle me-2"></i>
+            Se encontraron <strong>@Model.Count</strong> productos con stock bajo o agotado
+        </div>
+
+        <div class="table-responsive shadow-sm rounded-4">
+            <table class="table table-bordered table-hover align-middle">
+                <thead class="table-warning">
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-center">Polleria</th>
+                        <th class="text-center">Stock Actual</th>
+                        <th class="text-center">Stock Mínimo</th>
+                        <th class="text-center">Diferencia</th>
+                        <th class="text-center">Estado</th>
+                        <th class="text-center">Precio Venta</th>
+                        <th class="text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var stock in Model)
+                    {
+                        var diferencia = stock.stock_actual - stock.stock_minimo;
+                        var esCritico = stock.estado_stock == "AGOTADO";
+
+                        <tr class="@(esCritico ? "table-danger" : "")">
+                            <td>
+                                <div class="fw-bold">@stock.producto_nombre</div>
+                                <small class="text-muted">@stock.medida</small>
+                            </td>
+                            <td class="text-center">@stock.polleria_nombre</td>
+                            <td class="text-center fw-bold">@stock.stock_actual.ToString("N2")</td>
+                            <td class="text-center">@stock.stock_minimo.ToString("N2")</td>
+                            <td class="text-center">
+                                @if (diferencia < 0)
+                                {
+                                    <span class="badge bg-danger">@diferencia.ToString("N2")</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning">@diferencia.ToString("N2")</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @if (stock.estado_stock == "BAJO")
+                                {
+                                    <span class="badge bg-warning">Bajo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Agotado</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-info">S/ @stock.precio_venta.ToString("N2")</span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="@Url.Action("AjustarProducto", "Stock", new { id = stock.id_stock })"
+                                       class="btn btn-sm btn-outline-primary" title="Ajustar Stock">
+                                        <i class="fas fa-adjust"></i>
+                                    </a>
+                                    <a href="@Url.Action("Kardex", "Stock", new {
+                                            id_producto = stock.PRODUCTO_id_producto,
+                                            id_polleria = stock.POLLERIA_id_polleria
+                                          })"
+                                       class="btn btn-sm btn-outline-info ms-1" title="Ver Historial">
+                                        <i class="fas fa-history"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="alert alert-success" role="alert">
+            <i class="fas fa-check-circle me-2"></i>
+            ¡Excelente! No hay productos con stock bajo en este momento.
+        </div>
+    }
+</div>

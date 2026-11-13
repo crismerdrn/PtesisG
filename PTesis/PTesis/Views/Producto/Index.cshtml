@@ -1,0 +1,210 @@
+﻿@model PagedList.IPagedList<CapaModelo.CMProducto>
+@{
+    // Obtener las listas para el filtro (asumo que CargarDependencias las llena)
+    var listaTiposProducto = ViewBag.ListaTiposProducto as SelectList;
+    var idTipoProductoSeleccionado = ViewBag.IdTipoProductoSeleccionado as int?;
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-boxes me-2 text-primary"></i>Listado de Productos</h2>
+    </div>
+
+    <div class="mb-3">
+        @Html.ActionLink("Agregar Producto", "Create", null, new { @class = "btn btn-primary shadow-sm" })
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "Producto")" class="row g-3 align-items-center">
+                <div class="col-md-5">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar por nombre, descripción o código..." />
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    @Html.DropDownList("idTipoProducto", listaTiposProducto, "Filtrar por Tipo Producto", new { @class = "form-select" })
+                </div>
+                <div class="col-md-3 d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success w-50"><i class="fas fa-filter me-1"></i> Filtrar</button>
+                    <a href="@Url.Action("Index", "Producto")" class="btn btn-secondary w-50"><i class="fas fa-undo me-1"></i> Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Tipo Producto</th>
+                    <th class="text-center">Medida</th>
+                    <th class="text-end">Precio Venta</th>
+                    <th class="text-center">Insumos</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model != null && Model.Any())
+                {
+                    foreach (var p in Model)
+                    {
+                        <tr>
+                            <td>@p.Nombre</td>
+                            <td>@p.TipoProducto</td>
+                            <td class="text-center">@p.Medida (@p.AbreviaturaMedida)</td>
+                            <td class="text-end">@p.PrecioVenta.ToString("N2")</td>
+                            <td class="text-center">
+                                @if (p.CantidadInsumos > 0)
+                                {
+                                    <span class="badge bg-info text-dark">@p.CantidadInsumos</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">0</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge @(p.Estado ? "bg-success" : "bg-danger")">
+                                    @(p.Estado ? "Activo" : "Inactivo")
+                                </span>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group">
+                                    <a href="@Url.Action("Edit", new { id = p.id_producto })" class="btn btn-warning btn-sm" title="Editar"><i class="fas fa-edit"></i></a>
+                                    <a href="@Url.Action("Delete", new { id = p.id_producto })" class="btn btn-danger btn-sm ms-1" title="Eliminar/Inactivar"><i class="fas fa-trash-alt"></i></a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br />No se encontraron productos
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- PAGINACIÓN -->
+<div class="row mt-4">
+    <div class="col-md-12">
+        <div class="d-flex justify-content-center">
+            @if (Model.PageCount > 1)
+            {
+                <ul class="pagination">
+                    <!-- Botón Anterior -->
+                    @if (Model.HasPreviousPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new {
+                                pagina = Model.PageNumber - 1,
+                                buscar = ViewBag.Buscar,
+                                idTipoProducto = ViewBag.IdTipoProductoSeleccionado
+                            })">
+                                <i class="fas fa-chevron-left"></i> Anterior
+                            </a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="page-item disabled">
+                            <span class="page-link"><i class="fas fa-chevron-left"></i> Anterior</span>
+                        </li>
+                    }
+
+                    <!-- Números de página -->
+                    @for (int i = 1; i <= Model.PageCount; i++)
+                    {
+                        // Mostrar primeras 2, últimas 2, y las cercanas a la página actual
+                        if (i == 1 || i == Model.PageCount || (i >= Model.PageNumber - 2 && i <= Model.PageNumber + 2))
+                        {
+                            if (i == Model.PageNumber)
+                            {
+                                <li class="page-item active">
+                                    <span class="page-link">@i</span>
+                                </li>
+                            }
+                            else
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="@Url.Action("Index", new {
+                                        pagina = i,
+                                        buscar = ViewBag.Buscar,
+                                        idTipoProducto = ViewBag.IdTipoProductoSeleccionado
+                                    })">@i</a>
+                                </li>
+                            }
+                        }
+                        else if ((i == Model.PageNumber - 3 && Model.PageNumber > 3) ||
+                                 (i == Model.PageNumber + 3 && Model.PageNumber < Model.PageCount - 2))
+                        {
+                            <li class="page-item disabled">
+                                <span class="page-link">...</span>
+                            </li>
+                        }
+                    }
+
+                    <!-- Botón Siguiente -->
+                    @if (Model.HasNextPage)
+                    {
+                        <li class="page-item">
+                            <a class="page-link" href="@Url.Action("Index", new {
+                                pagina = Model.PageNumber + 1,
+                                buscar = ViewBag.Buscar,
+                                idTipoProducto = ViewBag.IdTipoProductoSeleccionado
+                            })">
+                                Siguiente <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    }
+                    else
+                    {
+                        <li class="page-item disabled">
+                            <span class="page-link">Siguiente <i class="fas fa-chevron-right"></i></span>
+                        </li>
+                    }
+                </ul>
+            }
+        </div>
+
+        <!-- Información de registros -->
+        <div class="text-center text-muted small mt-2">
+            <i class="fas fa-chart-line me-1"></i>
+            Mostrando <strong>@Model.FirstItemOnPage</strong> a <strong>@Model.LastItemOnPage</strong>
+            de <strong>@Model.TotalItemCount</strong> productos
+            @if (!string.IsNullOrEmpty(ViewBag.Buscar))
+            {
+                <span class="ms-2 badge bg-info">Filtrado por: "@ViewBag.Buscar"</span>
+            }
+            @if (ViewBag.IdTipoProductoSeleccionado != null)
+            {
+                <span class="ms-2 badge bg-info">Tipo producto filtrado</span>
+            }
+        </div>
+    </div>
+</div>

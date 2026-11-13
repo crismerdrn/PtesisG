@@ -1,0 +1,235 @@
+﻿@model CapaModelo.CMAsignarPermisosViewModel
+
+@{
+    ViewBag.Title = "Asignar Permisos";
+}
+
+<div class="container-fluid px-4">
+    <!-- Mensajes -->
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Título -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-user-shield me-2 text-primary"></i>
+            Asignar Permisos - @Model.NombreRol
+        </h2>
+        <a href="@Url.Action("Index", "Rol")" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Volver a Roles
+        </a>
+    </div>
+
+    <div class="alert alert-info mt-3">
+        <i class="fas fa-info-circle me-2"></i>
+        Marque las acciones que desea asignar al rol <strong>@Model.NombreRol</strong>.
+        Al marcar <strong>Ver</strong>, se marcarán todas las acciones de la fila.
+    </div>
+
+    @using (Html.BeginForm("Asignar", "Permisos", FormMethod.Post, new { id = "formAsignar" }))
+    {
+        @Html.AntiForgeryToken()
+        @Html.HiddenFor(m => m.IdRol)
+        @Html.HiddenFor(m => m.NombreRol)
+        @Html.HiddenFor(m => m.DescripcionRol)
+
+        <div class="card shadow-sm border-0 mt-3">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="fas fa-table me-2"></i>Matriz de Permisos</h5>
+                <div>
+                    <button type="button" class="btn btn-light btn-sm me-2" id="btnMarcarTodo">
+                        <i class="fas fa-check-double me-1"></i> Marcar todo
+                    </button>
+                    <button type="button" class="btn btn-light btn-sm" id="btnDesmarcarTodo">
+                        <i class="fas fa-times me-1"></i> Desmarcar todo
+                    </button>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-bordered table-hover align-middle mb-0">
+                        <thead class="table-dark">
+                            <tr>
+                                <th style="width:30%;">Pantalla / Submenú</th>
+                                <th class="text-center" style="width:17.5%;">
+                                    <i class="fas fa-eye me-1"></i> Ver
+                                </th>
+                                <th class="text-center" style="width:17.5%;">
+                                    <i class="fas fa-plus me-1"></i> Crear
+                                </th>
+                                <th class="text-center" style="width:17.5%;">
+                                    <i class="fas fa-edit me-1"></i> Editar
+                                </th>
+                                <th class="text-center" style="width:17.5%;">
+                                    <i class="fas fa-trash me-1"></i> Eliminar
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (Model.Grupos != null && Model.Grupos.Any())
+                            {
+                                for (int g = 0; g < Model.Grupos.Count; g++)
+                                {
+                                    var grupo = Model.Grupos[g];
+
+                                    @* Filas de submódulos *@
+                                    for (int s = 0; s < grupo.Submodulos.Count; s++)
+                                    {
+                                        var fila = grupo.Submodulos[s];
+                                        <tr>
+                                            <td class="ps-4">
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].IdSubmodulo)
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].NombreSubmodulo)
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].Modulo)
+                                                <i class="fas fa-angle-right text-muted me-2"></i>
+                                                @fila.NombreSubmodulo
+                                            </td>
+
+                                            @* VER *@
+                                            <td class="text-center">
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].IdVer)
+                                                @if (fila.IdVer.HasValue)
+                                                {
+                                                    @Html.CheckBoxFor(m => m.Grupos[g].Submodulos[s].Ver,
+                                                        new { @class = "form-check-input chk-permiso chk-ver", style = "width:20px;height:20px;cursor:pointer;" })
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+
+                                            @* CREAR *@
+                                            <td class="text-center">
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].IdCrear)
+                                                @if (fila.IdCrear.HasValue)
+                                                {
+                                                    @Html.CheckBoxFor(m => m.Grupos[g].Submodulos[s].Crear,
+                                                        new { @class = "form-check-input chk-permiso chk-crear", style = "width:20px;height:20px;cursor:pointer;" })
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+
+                                            @* EDITAR *@
+                                            <td class="text-center">
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].IdEditar)
+                                                @if (fila.IdEditar.HasValue)
+                                                {
+                                                    @Html.CheckBoxFor(m => m.Grupos[g].Submodulos[s].Editar,
+                                                        new { @class = "form-check-input chk-permiso chk-editar", style = "width:20px;height:20px;cursor:pointer;" })
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+
+                                            @* ELIMINAR *@
+                                            <td class="text-center">
+                                                @Html.HiddenFor(m => m.Grupos[g].Submodulos[s].IdEliminar)
+                                                @if (fila.IdEliminar.HasValue)
+                                                {
+                                                    @Html.CheckBoxFor(m => m.Grupos[g].Submodulos[s].Eliminar,
+                                                        new { @class = "form-check-input chk-permiso chk-eliminar", style = "width:20px;height:20px;cursor:pointer;" })
+                                                }
+                                                else
+                                                {
+                                                    <span class="text-muted">—</span>
+                                                }
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="5" class="text-center py-4 text-muted">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        No hay submódulos con acciones definidas. Primero cree permisos tipo ACCION.
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card-footer d-flex justify-content-between align-items-center">
+                <div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Guardar Permisos
+                    </button>
+                    <a href="@Url.Action("Index", "Permisos")" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </a>
+                </div>
+                <small class="text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    Los guiones (—) indican que esa acción no existe.
+                </small>
+            </div>
+        </div>
+    }
+</div>
+
+@section JavaScript {
+    <script>
+        $(document).ready(function () {
+            // Marcar "Ver" → marca toda la fila
+            $(document).on('change', '.chk-ver', function () {
+                var marcado = $(this).is(':checked');
+                $(this).closest('tr').find('.chk-permiso').prop('checked', marcado);
+            });
+
+            // Marcar cualquier acción → activa "Ver" automáticamente
+            $(document).on('change', '.chk-permiso:not(.chk-ver)', function () {
+                if ($(this).is(':checked')) {
+                    $(this).closest('tr').find('.chk-ver').prop('checked', true);
+                }
+            });
+
+            // Botones masivos
+            $('#btnMarcarTodo').click(function () {
+                $('.chk-permiso').prop('checked', true);
+            });
+
+            $('#btnDesmarcarTodo').click(function () {
+                $('.chk-permiso').prop('checked', false);
+            });
+
+            // Confirmación al enviar
+            $('#formAsignar').submit(function (e) {
+                var total = $('.chk-permiso:checked').length;
+                if (total === 0) {
+                    if (!confirm('No ha seleccionado ningún permiso. ¿Desea guardar de todas formas (esto quitará todos los permisos al rol)?')) {
+                        e.preventDefault();
+                    }
+                }
+            });
+        });
+    </script>
+}
+
+<style>
+    .chk-permiso {
+        transform: scale(1.2);
+    }
+
+    table tbody tr:hover {
+        background-color: #f0f8ff;
+    }
+
+    tr.table-secondary td {
+        background-color: #e9ecef !important;
+    }
+</style>

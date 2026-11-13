@@ -1,0 +1,75 @@
+﻿@model CapaModelo.CMProducto
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-box me-2"></i>Agregar Producto</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Nombre, new { @class = "form-control", placeholder = "Nombre" })
+                            @Html.LabelFor(m => m.Nombre)
+                            @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.PrecioVenta, "{0:0.00}", new
+                            {
+                                @class = "form-control",
+                                placeholder = "Precio Venta",
+                                type = "number",
+                                step = "0.01",
+                                min = "0.01"
+                            })
+                            @Html.LabelFor(m => m.PrecioVenta)
+                            @Html.ValidationMessageFor(m => m.PrecioVenta, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.MEDIDAS_id_medida, (SelectList)ViewBag.ListaMedidas, "Seleccione Medida", new { @class = "form-select" })
+                            @Html.LabelFor(m => m.MEDIDAS_id_medida, "Medida")
+                            @Html.ValidationMessageFor(m => m.MEDIDAS_id_medida, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.TIPO_PRODUCTO_id_tipoProducto, (SelectList)ViewBag.ListaTiposProducto, "Seleccione Tipo Producto", new { @class = "form-select" })
+                            @Html.LabelFor(m => m.TIPO_PRODUCTO_id_tipoProducto, "Tipo Producto")
+                            @Html.ValidationMessageFor(m => m.TIPO_PRODUCTO_id_tipoProducto, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control", placeholder = "Descripción", style = "height: 100px;" })
+                            @Html.LabelFor(m => m.Descripcion)
+                            @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-success me-2">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                    @Html.ActionLink("Volver al Listado", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

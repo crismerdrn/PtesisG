@@ -1,0 +1,237 @@
+﻿@model CapaModelo.CMVenta
+
+@{
+    ViewBag.Title = "Detalles de Venta";
+}
+
+<div class="container-fluid px-4">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+<div class="d-flex justify-content-between align-items-center mt-4">
+    <h2 class="fw-bold">
+        <i class="fas fa-shopping-bag me-2 text-success"></i>
+        Venta #@Model.NumeroVenta
+    </h2>
+
+    <div class="btn-group">
+        <button type="button" class="btn btn-secondary" onclick="history.back();">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </button>
+
+        @if (ViewBag.PuedeAnular != null && (bool)ViewBag.PuedeAnular && Model.Estado == "COMPLETADA")
+        {
+            @Html.ActionLink("Anular", "Anular", new { id = Model.id_venta }, new { @class = "btn btn-danger ms-1" })
+        }
+
+        <a href="@Url.Action("ImprimirComprobante", "Venta", new { id = Model.id_venta })"
+           class="btn btn-outline-primary ms-1" target="_blank">
+            <i class="fas fa-print me-1"></i> Imprimir Comprobante
+        </a>
+    </div>
+</div>
+
+    <!-- Información de la Venta -->
+    <div class="row mt-4">
+        <div class="col-md-8">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-info-circle me-2"></i>Información de la Venta</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Cliente</label>
+                            <p class="fw-bold mb-0">
+                                @if (Model.CLIENTE_id_cliente.HasValue)
+                                {
+                                    @Model.NombreCliente
+                                    <br />
+                                    <small class="text-muted">@Model.TelefonoCliente</small>
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic">Cliente no registrado</span>
+                                }
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Fecha y Hora</label>
+                            <p class="fw-bold mb-0">@Model.Fecha_venta.ToString("dd/MM/yyyy")</p>
+                            <small class="text-muted">@Model.hora_venta.ToString(@"hh\:mm")</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Estado</label>
+                            <p class="mb-0">
+                                @if (Model.Estado == "COMPLETADA")
+                                {
+                                    <span class="badge bg-success">COMPLETADA</span>
+                                }
+                                else if (Model.Estado == "PENDIENTE")
+                                {
+                                    <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                }
+                                else if (Model.Estado == "ANULADA")
+                                {
+                                    <span class="badge bg-danger">ANULADA</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@Model.Estado</span>
+                                }
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Forma de Pago</label>
+                            <p class="fw-bold mb-0">@Model.Tipo_venta</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Vendedor</label>
+                            <p class="fw-bold mb-0">@Model.NombreVendedor</p>
+                            <small class="text-muted">@Model.Fecha_venta.ToString("dd/MM/yyyy HH:mm")</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Pollería</label>
+                            <p class="fw-bold mb-0">@Model.NombrePolleria</p>
+                        </div>
+
+                        @*if (!string.IsNullOrEmpty(Model.Observaciones))
+                        {
+                            <div class="col-12 mb-3">
+                                <label class="small text-muted">Observaciones</label>
+                                <p class="fw-bold mb-0">@Model.Observaciones</p>
+                            </div>
+                        }*@
+
+                        <div class="col-12 mt-3">
+                            <label class="small text-muted">Total Venta</label>
+                            <h2 class="text-success fw-bold">Bs. @Model.Total_venta.ToString("0.00")</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Acciones Rápidas -->
+        <div class="col-md-4">
+            <div class="card shadow-sm border-0 h-100">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0"><i class="fas fa-bolt me-2"></i>Acciones Rápidas</h5>
+                </div>
+                <div class="card-body d-flex flex-column">
+                    @if (Model.Estado == "COMPLETADA")
+                    {
+                        <a href="@Url.Action("Anular", new { id = Model.id_venta })"
+                           class="btn btn-danger mb-2">
+                            <i class="fas fa-ban me-1"></i> Anular Venta
+                        </a>
+                    }
+
+                    <a href="@Url.Action("ImprimirComprobante", new { id = Model.id_venta, tipo = "TICKET" })"
+                       class="btn btn-outline-primary mb-2" target="_blank">
+                        <i class="fas fa-receipt me-1"></i> Imprimir Ticket
+                    </a>
+
+                    <a href="@Url.Action("ImprimirComprobante", new { id = Model.id_venta, tipo = "FACTURA" })"
+                       class="btn btn-outline-secondary" target="_blank">
+                        <i class="fas fa-file-invoice me-1"></i> Imprimir Factura
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Detalles de la Venta -->
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-header bg-light">
+            <h5 class="mb-0"><i class="fas fa-list me-2"></i>Detalles de la Venta</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th width="5%">#</th>
+                            <th width="35%">Producto</th>
+                            <th width="10%" class="text-center">Cantidad</th>
+                            <th width="15%" class="text-end">Precio Unit.</th>
+                            <th width="15%" class="text-end">Subtotal</th>
+                            <th width="10%" class="text-center">Medida</th>
+                            @if (Model.Estado == "ANULADA")
+                            {
+                                <th width="10%" class="text-center">Estado Stock</th>
+                            }
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Detalles != null && Model.Detalles.Any())
+                        {
+                            var contador = 1;
+                            foreach (var detalle in Model.Detalles)
+                            {
+                                <tr>
+                                    <td class="text-center">@contador</td>
+                                    <td>
+                                        <strong>@detalle.NombreProducto</strong>
+                                        @if (!string.IsNullOrEmpty(detalle.DescripcionProducto))
+                                        {
+                                            <br />
+                                            <small class="text-muted">@detalle.DescripcionProducto</small>
+                                        }
+                                    </td>
+                                    <td class="text-center">@detalle.cantidad</td>
+                                    <td class="text-end">Bs. @detalle.precio_unitario.ToString("0.00")</td>
+                                    <td class="text-end fw-bold">Bs. @detalle.subtotal.ToString("0.00")</td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark">@detalle.AbreviaturaMedida</span>
+                                    </td>
+                                    @if (Model.Estado == "ANULADA")
+                                    {
+                                        <td class="text-center">
+                                            <span class="badge bg-success">Stock Revertido</span>
+                                        </td>
+                                    }
+                                </tr>
+                                contador++;
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="@(Model.Estado == "ANULADA" ? "7" : "6")" class="text-center py-4 text-muted">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    No hay detalles registrados para esta venta
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    <tfoot class="table-light">
+                        <tr>
+                            <td colspan="@(Model.Estado == "ANULADA" ? "4" : "3")" class="text-end fw-bold">TOTAL:</td>
+                            <td class="text-end fw-bold text-success">Bs. @Model.Total_venta.ToString("0.00")</td>
+                            <td colspan="2"></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section JavaScript{
+    <script>
+        function imprimirComprobante(tipo) {
+            window.open('@Url.Action("ImprimirComprobante", "Venta", new { id = Model.id_venta })' + '?tipo=' + tipo, '_blank');
+        }
+    </script>
+}

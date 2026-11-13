@@ -1,0 +1,134 @@
+﻿@model CapaModelo.CMVenta
+
+@{
+    ViewBag.Title = "Anular Venta";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-ban me-2"></i>Anular Venta</h4>
+        </div>
+
+        <div class="card-body">
+            <div class="alert alert-danger">
+                <h5><i class="fas fa-exclamation-triangle me-2"></i>¡ADVERTENCIA!</h5>
+                <p class="mb-0">
+                    Está a punto de anular la venta <strong>#@Model.NumeroVenta</strong>. Esta acción:
+                </p>
+                <ul class="mb-0 mt-2">
+                    <li>Cambiará el estado de la venta a <strong>ANULADA</strong></li>
+                    <li>Revertirá el stock de todos los productos vendidos</li>
+                    <li>Registrará un movimiento en el historial de stock</li>
+                    <li>Esta acción <strong>NO SE PUEDE DESHACER</strong></li>
+                </ul>
+            </div>
+
+            <div class="row mb-4">
+                <div class="col-md-6">
+                    <label class="small text-muted">Cliente</label>
+                    <p class="fw-bold">
+                        @if (Model.CLIENTE_id_cliente.HasValue)
+                        {
+                            @Model.NombreCliente
+                        }
+                        else
+                        {
+                            <span class="text-muted fst-italic">Cliente no registrado</span>
+                        }
+                    </p>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Fecha</label>
+                    <p class="fw-bold">@Model.Fecha_venta.ToString("dd/MM/yyyy")</p>
+                </div>
+                <div class="col-md-3">
+                    <label class="small text-muted">Total</label>
+                    <p class="fw-bold text-danger">Bs. @Model.Total_venta.ToString("0.00")</p>
+                </div>
+            </div>
+
+            <!-- Detalles que se revertirán -->
+            <div class="card border-danger mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h6 class="mb-0"><i class="fas fa-undo me-2"></i>Productos a revertir en stock</h6>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Producto</th>
+                                    <th class="text-center">Cantidad Vendida</th>
+                                    <th class="text-center">Stock a Revertir</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @if (Model.Detalles != null && Model.Detalles.Any())
+                                {
+                                    foreach (var detalle in Model.Detalles)
+                                    {
+                                        <tr>
+                                            <td>@detalle.NombreProducto</td>
+                                            <td class="text-center">@detalle.cantidad</td>
+                                            <td class="text-center">
+                                                <span class="badge bg-success">+@detalle.cantidad @detalle.AbreviaturaMedida</span>
+                                            </td>
+                                        </tr>
+                                    }
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            @using (Html.BeginForm("Anular", "Venta", new { id = Model.id_venta }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">
+                        <i class="fas fa-comment me-1"></i> Motivo de Anulación *
+                    </label>
+                    <textarea name="motivo" class="form-control" rows="3"
+                              placeholder="Ingrese el motivo de la anulación..."
+                              required></textarea>
+                    <small class="text-muted">Este motivo quedará registrado en el historial.</small>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end gap-2">
+                    @Html.ActionLink("Cancelar", "Details", new { id = Model.id_venta },
+                        new { @class = "btn btn-secondary px-4" })
+                    <button type="submit" class="btn btn-danger px-4" onclick="return confirmarAnulacion()">
+                        <i class="fas fa-ban me-1"></i> Confirmar Anulación
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript{
+    <script>
+        function confirmarAnulacion() {
+            const motivo = $('textarea[name="motivo"]').val().trim();
+
+            if (!motivo) {
+                alert('Debe ingresar el motivo de la anulación.');
+                return false;
+            }
+
+            if (!confirm('¿ESTÁ ABSOLUTAMENTE SEGURO de anular esta venta?\n\nEsta acción revertirá el stock y NO se podrá deshacer.')) {
+                return false;
+            }
+
+            // Mostrar loading
+            $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Anulando...');
+
+            return true;
+        }
+    </script>
+}

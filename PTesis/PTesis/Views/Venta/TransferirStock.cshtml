@@ -1,0 +1,345 @@
+﻿@model CapaModelo.CMTransfersVentaStock
+
+@{
+    ViewBag.Title = "Transferir Stock";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-info text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-exchange-alt me-2"></i>Transferir Stock entre Pollerías</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm("TransferirStock", "Venta", FormMethod.Post, new { id = "formTransferencia" }))
+            {
+                @Html.AntiForgeryToken()
+
+            <div class="row g-3">
+                <!-- Producto -->
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        @Html.DropDownListFor(m => m.IdProducto,
+                            ViewBag.ListaProductos as SelectList,
+                            "Seleccione un producto",
+                            new
+                            {
+                                @class = "form-select",
+                                id = "ProductoSelect",
+                                required = "required",
+                                onchange = "cargarStockOrigen()"
+                            })
+                        <label for="ProductoSelect">Producto *</label>
+                    </div>
+                </div>
+
+                <!-- Pollería Origen -->
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        @Html.DropDownListFor(m => m.IdPolleriaOrigen,
+                            ViewBag.ListaPollerias as SelectList,
+                            "Seleccione pollería origen",
+                            new
+                            {
+                                @class = "form-select",
+                                id = "PolleriaOrigenSelect",
+                                required = "required",
+                                onchange = "cargarStockOrigen()"
+                            })
+                        <label for="PolleriaOrigenSelect">Pollería Origen *</label>
+                    </div>
+                </div>
+
+                <!-- Stock Origen -->
+                <div class="col-md-4">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body text-center">
+                            <label class="small">Stock Disponible</label>
+                            <h3 id="stockOrigenInfo" class="fw-bold mb-0">0</h3>
+                            <small id="nombrePolleriaOrigen"></small>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4 text-center align-self-center">
+                    <i class="fas fa-arrow-right display-4 text-info"></i>
+                </div>
+
+                @Html.DropDownListFor(
+m => m.IdPolleriaDestino,
+((IEnumerable<SelectListItem>)ViewBag.ListaPollerias)
+    .Where(p => p.Value != Model.IdPolleriaOrigen.ToString()),
+"Seleccione pollería destino",
+new
+{
+    @class = "form-select",
+    id = "PolleriaDestinoSelect",
+    required = "required"
+})
+
+
+                <!-- Cantidad -->
+                <div class="col-md-6">
+                    <div class="form-floating">
+                        @Html.TextBoxFor(m => m.Cantidad,
+                            new
+                            {
+                                @class = "form-control",
+                                type = "number",
+                                min = "0.01",
+                                step = "0.01",
+                                required = "required",
+                                id = "Cantidad",
+                                oninput = "validarCantidad()"
+                            })
+                        <label for="Cantidad">Cantidad a Transferir *</label>
+                    </div>
+                    <div class="mt-2">
+                        <div class="progress">
+                            <div id="progresoStock" class="progress-bar" role="progressbar"
+                                 style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                        </div>
+                        <small class="text-muted" id="porcentajeStock">0% del stock disponible</small>
+                    </div>
+                </div>
+
+                <!-- Información de la transferencia -->
+                <div class="col-md-6">
+                    <div class="card bg-light">
+                        <div class="card-body">
+                            <h6 class="fw-bold">Resumen de Transferencia</h6>
+                            <div class="row">
+                                <div class="col-6">
+                                    <small class="text-muted">Origen:</small>
+                                    <div id="stockFinalOrigen" class="fw-bold">0</div>
+                                </div>
+                                <div class="col-6">
+                                    <small class="text-muted">Destino:</small>
+                                    <div id="stockFinalDestino" class="fw-bold text-success">+0</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Motivo -->
+                <div class="col-12">
+                    <div class="form-floating">
+                        @Html.TextAreaFor(m => m.Motivo,
+                            new
+                            {
+                                @class = "form-control",
+                                placeholder = "Motivo de la transferencia",
+                                rows = 3,
+                                required = "required"
+                            })
+                        <label for="Motivo">Motivo de la Transferencia *</label>
+                    </div>
+                    <small class="text-muted">Ej: Reabastecimiento, venta en otra sucursal, etc.</small>
+                </div>
+            </div>
+
+                <hr class="my-4" />
+
+                <!-- Validación -->
+                <div class="alert alert-warning" id="alertaValidacion" style="display: none;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <span id="mensajeValidacion"></span>
+                </div>
+
+                <!-- Botones -->
+                <div class="d-flex justify-content-end gap-2">
+                    @Html.ActionLink("Cancelar", "StockDisponible", null,
+                        new { @class = "btn btn-secondary px-4" })
+                    <button type="submit" class="btn btn-info px-4" onclick="return validarTransferencia()">
+                        <i class="fas fa-exchange-alt me-1"></i> Realizar Transferencia
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript{
+    <script>
+        let stockDisponibleOrigen = 0;
+
+        $(document).ready(function () {
+            // Si vienen parámetros en la URL, cargarlos
+            const urlParams = new URLSearchParams(window.location.search);
+            const idProducto = urlParams.get('idProducto');
+            const idPolleriaOrigen = urlParams.get('idPolleriaOrigen');
+
+            if (idProducto && idPolleriaOrigen) {
+                $('#ProductoSelect').val(idProducto);
+                $('#PolleriaOrigenSelect').val(idPolleriaOrigen);
+                cargarStockOrigen();
+            }
+
+            // Actualizar destino cuando cambia origen
+            $('#PolleriaOrigenSelect').change(function () {
+                const origenId = $(this).val();
+                $('#PolleriaDestinoSelect option').show();
+                $('#PolleriaDestinoSelect option[value="' + origenId + '"]').hide();
+                if ($('#PolleriaDestinoSelect').val() === origenId) {
+                    $('#PolleriaDestinoSelect').val('');
+                }
+            });
+        });
+
+        function cargarStockOrigen() {
+            const idProducto = $('#ProductoSelect').val();
+            const idPolleria = $('#PolleriaOrigenSelect').val();
+
+            if (!idProducto || !idPolleria) {
+                resetearInformacion();
+                return;
+            }
+
+            $.post('@Url.Action("ObtenerStockProducto", "Venta")', {
+                idProducto: idProducto,
+                idPolleria: idPolleria
+            }, function (respuesta) {
+                if (respuesta.success) {
+                    const producto = respuesta.stock;
+                    stockDisponibleOrigen = producto.stockActual;
+
+                    // Actualizar información
+                    $('#stockOrigenInfo').text(producto.stockActual + ' unidades');
+                    $('#nombrePolleriaOrigen').text(producto.nombrePolleria || 'Pollería origen');
+
+                    // Actualizar resumen
+                    actualizarResumen();
+
+                } else {
+                    resetearInformacion();
+                    alert(respuesta.message);
+                }
+            });
+        }
+
+        function validarCantidad() {
+            const cantidad = parseFloat($('#Cantidad').val()) || 0;
+
+            if (cantidad <= 0) {
+                mostrarAlerta('La cantidad debe ser mayor a 0', 'danger');
+                return;
+            }
+
+            if (cantidad > stockDisponibleOrigen) {
+                mostrarAlerta('No hay suficiente stock disponible', 'danger');
+                $('#Cantidad').val(stockDisponibleOrigen);
+                actualizarResumen();
+                return;
+            }
+
+            // Calcular porcentaje
+            const porcentaje = (cantidad / stockDisponibleOrigen) * 100;
+            $('#progresoStock').css('width', porcentaje + '%');
+            $('#porcentajeStock').text(porcentaje.toFixed(1) + '% del stock disponible');
+
+            // Cambiar color según porcentaje
+            if (porcentaje > 80) {
+                $('#progresoStock').removeClass('bg-warning bg-success').addClass('bg-danger');
+            } else if (porcentaje > 50) {
+                $('#progresoStock').removeClass('bg-success bg-danger').addClass('bg-warning');
+            } else {
+                $('#progresoStock').removeClass('bg-warning bg-danger').addClass('bg-success');
+            }
+
+            actualizarResumen();
+            ocultarAlerta();
+        }
+
+        function actualizarResumen() {
+            const cantidad = parseFloat($('#Cantidad').val()) || 0;
+            const stockFinalOrigen = stockDisponibleOrigen - cantidad;
+
+            $('#stockFinalOrigen').text(stockFinalOrigen.toFixed(2));
+            $('#stockFinalDestino').text('+' + cantidad.toFixed(2));
+        }
+
+        function mostrarAlerta(mensaje, tipo) {
+            $('#alertaValidacion').removeClass('alert-warning alert-danger alert-success')
+                .addClass('alert-' + tipo)
+                .show();
+            $('#mensajeValidacion').html('<strong>' + mensaje + '</strong>');
+        }
+
+        function ocultarAlerta() {
+            $('#alertaValidacion').hide();
+        }
+
+        function resetearInformacion() {
+            stockDisponibleOrigen = 0;
+            $('#stockOrigenInfo').text('0');
+            $('#nombrePolleriaOrigen').text('');
+            $('#Cantidad').val('');
+            $('#progresoStock').css('width', '0%');
+            $('#porcentajeStock').text('0% del stock disponible');
+            actualizarResumen();
+        }
+
+        function validarTransferencia() {
+            const idProducto = $('#ProductoSelect').val();
+            const idOrigen = $('#PolleriaOrigenSelect').val();
+            const idDestino = $('#PolleriaDestinoSelect').val();
+            const cantidad = parseFloat($('#Cantidad').val()) || 0;
+            const motivo = $('textarea[name="Motivo"]').val().trim();
+
+            // Validaciones básicas
+            if (!idProducto) {
+                alert('Debe seleccionar un producto.');
+                return false;
+            }
+
+            if (!idOrigen) {
+                alert('Debe seleccionar la pollería de origen.');
+                return false;
+            }
+
+            if (!idDestino) {
+                alert('Debe seleccionar la pollería de destino.');
+                return false;
+            }
+
+            if (idOrigen === idDestino) {
+                alert('La pollería de origen y destino no pueden ser la misma.');
+                return false;
+            }
+
+            if (cantidad <= 0) {
+                alert('La cantidad debe ser mayor a 0.');
+                return false;
+            }
+
+            if (cantidad > stockDisponibleOrigen) {
+                alert('No hay suficiente stock disponible en la pollería de origen.');
+                return false;
+            }
+
+            if (!motivo) {
+                alert('Debe ingresar el motivo de la transferencia.');
+                return false;
+            }
+
+            // Confirmación final
+            const mensaje = '¿Está seguro de realizar esta transferencia?\n\n' +
+                           'Producto: ' + $('#ProductoSelect option:selected').text() + '\n' +
+                           'Origen: ' + $('#PolleriaOrigenSelect option:selected').text() + '\n' +
+                           'Destino: ' + $('#PolleriaDestinoSelect option:selected').text() + '\n' +
+                           'Cantidad: ' + cantidad + '\n' +
+                           'Stock origen después: ' + (stockDisponibleOrigen - cantidad) + '\n\n' +
+                           'Motivo: ' + motivo;
+
+            if (!confirm(mensaje)) {
+                return false;
+            }
+
+            // Mostrar loading
+            $('button[type="submit"]').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-1"></i> Procesando...');
+
+            return true;
+        }
+    </script>
+}

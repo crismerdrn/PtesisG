@@ -1,0 +1,196 @@
+﻿@model List<CapaModelo.Usuario>
+@using System.Web
+
+<div class="container-fluid px-4">
+    <!-- Título -->
+    <div class="mt-4">
+        <h2 class="fw-bold">
+            <i class="fas fa-users me-2 text-primary"></i>
+            Listado de Usuarios
+        </h2>
+    </div>
+
+    <!-- Botón Agregar Usuario -->
+    <div class="mb-3">
+        @Html.ActionLink(
+            "Agregar Usuario",
+            "Create",
+            null,
+            new { @class = "btn btn-primary shadow-sm" }
+        )
+    </div>
+
+    <!-- Buscador -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+
+            <form method="get"
+                  action="@Url.Action("Index", "Usuario")"
+                  class="row g-2 align-items-center">
+
+                <div class="col-md-9 col-lg-10">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light">
+                            <i class="fas fa-search"></i>
+                        </span>
+
+                        <input type="text"
+                               name="buscar"
+                               value="@ViewBag.Buscar"
+                               class="form-control"
+                               placeholder="Buscar usuario, correo, teléfono..." />
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-lg-2 d-flex gap-2 justify-content-end">
+
+                    <button type="submit" class="btn btn-success w-50">
+                        <i class="fas fa-search me-1"></i>
+                        Buscar
+                    </button>
+
+                    <a href="@Url.Action("Index", "Usuario")"
+                       class="btn btn-secondary w-50">
+                        <i class="fas fa-undo me-1"></i>
+                        Limpiar
+                    </a>
+
+                </div>
+
+            </form>
+
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-4">
+
+        <table class="table table-bordered table-hover align-middle">
+
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Apellido</th>
+                    <th>Correo</th>
+                    <th>Teléfono</th>
+                    <th>Dirección</th>
+                    <th>Usuario</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+
+            <tbody>
+
+                @foreach (var u in Model)
+                {
+                    <tr>
+
+                        <td>@u.nombre</td>
+                        <td>@u.apellido</td>
+                        <td>@u.correo</td>
+                        <td>@u.telefono</td>
+                        <td>@u.direccion</td>
+                        <td>@u.usuario</td>
+                        <td>@u.Rol</td>
+
+                        <td>
+                            @if (u.estado)
+                            {
+                                <span class="badge bg-success">
+                                    Activo
+                                </span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-secondary">
+                                    Inactivo
+                                </span>
+                            }
+                        </td>
+
+                        <td class="text-center">
+
+                            <div class="btn-group" role="group">
+
+                                @Html.ActionLink(
+                                    "Editar",
+                                    "Edit",
+                                    new { id = u.id_usuario },
+                                    new { @class = "btn btn-warning btn-sm" }
+                                )
+
+                                <button type="button"
+                                        class="btn btn-danger btn-sm ms-1"
+                                        onclick="confirmarEliminarUsuario(this)"
+                                        data-id="@u.id_usuario"
+                                        data-nombre="@($"{u.nombre} {u.apellido}")">
+                                    <i class="fas fa-trash-alt me-1"></i>
+                                    Eliminar
+                                </button>
+
+                            </div>
+
+                        </td>
+
+                    </tr>
+                }
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+<form id="formEliminar"
+      method="post"
+      action="@Url.Action("Delete", "Usuario")"
+      style="display:none;">
+    @Html.AntiForgeryToken()
+    <input type="hidden" name="id" id="eliminarUsuarioId" value="" />
+</form>
+
+@section JavaScript {
+    <script src="~/Scripts/ValidacionesUsuario.js"></script>
+}
+
+<script>
+
+    document.addEventListener("DOMContentLoaded", function () {
+
+        @if (TempData["Exito"] != null)
+        {
+            var mensajeExito = HttpUtility.JavaScriptStringEncode(
+                TempData["Exito"].ToString()
+            );
+
+            <text>
+                mostrarExito('@Html.Raw(mensajeExito)');
+            </text>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            var mensajeError = HttpUtility.JavaScriptStringEncode(
+                TempData["Error"].ToString()
+            );
+
+            <text>
+                mostrarError('@Html.Raw(mensajeError)');
+            </text>
+        }
+
+    });
+
+    function confirmarEliminarUsuario(boton) {
+    const id = boton.getAttribute("data-id");
+    const nombre = boton.getAttribute("data-nombre");
+
+    confirmarEliminacion(nombre, function () {
+        document.getElementById("eliminarUsuarioId").value = id;
+        document.getElementById("formEliminar").submit();
+    });
+}
+
+</script>

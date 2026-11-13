@@ -1,0 +1,114 @@
+﻿@*@model CapaModelo.CMPermisos
+
+    <div class="container-fluid px-4">
+        <div class="card shadow-sm border-0 rounded-4 mt-4">
+            <div class="card-header bg-primary text-white rounded-top-4">
+                <h4 class="mb-0"><i class="fas fa-key me-2"></i>Agregar Permiso</h4>
+            </div>
+
+            <div class="card-body">
+                @using (Html.BeginForm())
+                {
+                    @Html.AntiForgeryToken()
+
+                    <div class="row g-3">
+                        <div class="col-md-12">
+                            <div class="form-floating">
+                                @Html.TextBoxFor(m => m.NombreMenu, new
+                                {
+                                    @class = "form-control",
+                                    placeholder = "Ej: Usuarios, Roles, Reportes, etc."
+                                })
+                                @Html.LabelFor(m => m.NombreMenu, "Nombre del Menú")
+                                @Html.ValidationMessageFor(m => m.NombreMenu, "", new { @class = "text-danger small mt-1" })
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+
+                    <div class="d-flex justify-content-end">
+                        <button type="submit" class="btn btn-success me-2">
+                            <i class="fas fa-save me-1"></i> Guardar
+                        </button>
+                        @Html.ActionLink("Volver", "Index", null, new { @class = "btn btn-secondary" })
+                    </div>
+                }
+            </div>
+        </div>
+    </div>*@
+@model CapaModelo.CMPermisos
+@{
+    ViewBag.Title = "Nuevo Permiso";
+}
+
+<div class="container-fluid px-4">
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <h2 class="fw-bold"><i class="fas fa-plus-circle me-2 text-success"></i>Nuevo Permiso</h2>
+        <a href="@Url.Action("Mantenimiento")" class="btn btn-secondary">
+            <i class="fas fa-arrow-left me-1"></i> Volver
+        </a>
+    </div>
+
+    <div class="card shadow-sm border-0 mt-4">
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="row">
+                    <div class="col-md-6 mb-3">
+                        @Html.LabelFor(m => m.NombreMenu, new { @class = "form-label fw-bold" })
+                        @Html.TextBoxFor(m => m.NombreMenu, new { @class = "form-control", placeholder = "Ej: Gestión de Usuarios" })
+                        @Html.ValidationMessageFor(m => m.NombreMenu, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        @Html.LabelFor(m => m.Modulo, new { @class = "form-label fw-bold" })
+                        @Html.TextBoxFor(m => m.Modulo, new { @class = "form-control", placeholder = "Ej: ADMIN, VENTA, COMPRA" })
+                        @Html.ValidationMessageFor(m => m.Modulo, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        @Html.LabelFor(m => m.Tipo, new { @class = "form-label fw-bold" })
+                        @Html.DropDownListFor(m => m.Tipo, (IEnumerable<SelectListItem>)ViewBag.Tipos, "Seleccionar tipo", new { @class = "form-select" })
+                        @Html.ValidationMessageFor(m => m.Tipo, "", new { @class = "text-danger" })
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        @Html.LabelFor(m => m.Padre_id, "Menú Padre", new { @class = "form-label fw-bold" })
+                        @Html.DropDownListFor(m => m.Padre_id, (IEnumerable<SelectListItem>)ViewBag.PermisosPadre, new { @class = "form-select" })
+                        <small class="text-muted">Seleccione si es submenú o acción</small>
+                    </div>
+
+                    <div class="col-md-6 mb-3">
+                        @Html.LabelFor(m => m.Orden, new { @class = "form-label fw-bold" })
+                        @Html.TextBoxFor(m => m.Orden, new { @class = "form-control", type = "number", placeholder = "Ej: 1, 2, 3..." })
+                        @Html.ValidationMessageFor(m => m.Orden, "", new { @class = "text-danger" })
+                    </div>
+
+
+                    <div class="col-12 mb-3">
+                        @Html.LabelFor(m => m.Descripcion, new { @class = "form-label fw-bold" })
+                        @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control", rows = 3, placeholder = "Descripción del permiso..." })
+                        @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <hr />
+                <div class="text-end">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i> Guardar Permiso
+                    </button>
+                    <a href="@Url.Action("Mantenimiento")" class="btn btn-secondary ms-2">
+                        <i class="fas fa-times me-1"></i> Cancelar
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    @Scripts.Render("~/bundles/jqueryval")
+}

@@ -1,0 +1,72 @@
+﻿@model CapaModelo.CMClientes
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-warning rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-user-slash me-2"></i>Confirmar Desactivación</h4>
+        </div>
+
+        <div class="card-body">
+            <h5 class="text-warning mb-4">¿Está seguro que desea desactivar al cliente <strong>@Model.Nombre @Model.Apellido</strong>?</h5>
+
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Nota:</strong> El cliente será desactivado pero permanecerá almacenado.
+                Podrá ser reactivado posteriormente desde la vista de clientes inactivos.
+            </div>
+
+            @using (Html.BeginForm("Delete", "Cliente", new { id = Model.id_cliente }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_cliente)
+
+                <dl class="row">
+                    <dt class="col-sm-3">Nombre Completo</dt>
+                    <dd class="col-sm-9">@Model.Nombre @Model.Apellido</dd>
+
+                    <dt class="col-sm-3">Teléfono</dt>
+                    <dd class="col-sm-9">@Model.Telefono</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.Email))
+                    {
+                        <dt class="col-sm-3">Email</dt>
+                        <dd class="col-sm-9">@Model.Email</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Direccion))
+                    {
+                        <dt class="col-sm-3">Dirección</dt>
+                        <dd class="col-sm-9">@Model.Direccion</dd>
+                    }
+
+                    <dt class="col-sm-3">Estado Actual</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.Estado)
+                        {
+                            <span class="badge bg-success">Activo</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Inactivo</span>
+                        }
+                    </dd>
+
+                    @if (Model.FechaRegistro != null)
+                    {
+                        <dt class="col-sm-3">Fecha Registro</dt>
+                        <dd class="col-sm-9">@Model.FechaRegistro.ToString("dd/MM/yyyy")</dd>
+                    }
+                </dl>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-warning me-2">
+                        <i class="fas fa-user-slash me-1"></i> Desactivar Cliente
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

@@ -1,0 +1,67 @@
+﻿@model CapaModelo.CMPolleria
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-store me-2"></i>Registrar Nueva Pollería</h4>
+        </div>
+
+        <div class="card-body">
+            @if (ViewBag.InfoMessage != null)
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>@ViewBag.InfoMessage
+                </div>
+            }
+
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Nombre, new { @class = "form-control", placeholder = "Nombre", required = "required" })
+                            @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "text-danger small" })
+                            <label>Nombre *</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Direccion, new { @class = "form-control", placeholder = "Dirección" })
+                            <label>Dirección</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Telefono, new { @class = "form-control", placeholder = "Teléfono" })
+                            <label>Teléfono</label>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check form-switch mt-4">
+                            @Html.CheckBoxFor(m => m.Estado, new { @class = "form-check-input", role = "switch", id = "estadoPolleria" })
+                            <label class="form-check-label" for="estadoPolleria">Polleria Activa</label>
+                            <small class="form-text text-muted d-block">
+                                Solo puede haber una pollería activa a la vez.
+                            </small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-success me-2">
+                        <i class="fas fa-save me-1"></i> Guardar Polleria
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

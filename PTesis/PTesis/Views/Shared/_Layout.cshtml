@@ -1,0 +1,343 @@
+﻿@using System.Web.Mvc
+@using System.Web.Optimization
+@using CapaModelo
+@{
+    var controller = ViewContext.RouteData.Values["controller"].ToString();
+    var usuario = Session["Usuario"] as Usuario;
+    var permisos = usuario?.Permisos ?? new List<string>();
+    var esAdmin = usuario?.Rol == "Administrador";
+}
+
+<!DOCTYPE html>
+<html>
+<head>
+    <script src="~/Scripts/fontawesome/BFCache.js"></script>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>@ViewBag.Title - Sistema de Gestión</title>
+    <link href="~/Views/Shared/StyleSheet1.css" rel="stylesheet" />
+    @Styles.Render("~/Content/css")
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.css" />
+    <link href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css" rel="stylesheet">
+</head>
+<body>
+    <!-- NAV SUPERIOR -->
+    <nav class="sb-topnav navbar navbar-expand navbar-dark bg-dark">
+        <div class="navbar-brand-container d-flex align-items-center">
+            <a class="navbar-brand ps-3" href="@Url.Action("Index","Home")">Sistema</a>
+            <button class="btn btn-link btn-sm order-1 order-lg-0 me-4 me-lg-0" id="sidebarToggle">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+
+        <ul class="navbar-nav ms-auto me-3">
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user fa-fw me-1"></i>
+                    @if (usuario != null)
+                    {
+                        <span>@usuario.nombre</span>
+                    }
+                </a>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="navbarDropdown">
+                    <li>
+                        <div class="dropdown-header">
+                            <div class="fw-bold">Bienvenido, @usuario.nombre</div>
+                            <small class="text-muted">@usuario.Rol</small>
+                        </div>
+                    </li>
+                    <li><hr class="dropdown-divider" /></li>
+                    <li>
+                        <a class="dropdown-item" href="@Url.Action("CerrarSesion", "Login")">
+                            <i class="fas fa-sign-out-alt me-2"></i>Cerrar Sesión
+                        </a>
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <!-- LAYOUT PRINCIPAL -->
+    <div id="layoutSidenav">
+        <!-- MENU LATERAL -->
+        <div id="layoutSidenav_nav">
+            <nav class="sb-sidenav accordion sb-sidenav-dark" id="sidenavAccordion">
+                <div class="sb-sidenav-menu">
+                    <div class="nav">
+                        <div class="sb-sidenav-menu-heading">MÓDULOS</div>
+
+                        <!-- INICIO -->
+                        <a class="nav-link @(controller == "Home" ? "active" : "")" href="@Url.Action("Index","Home")">
+                            <div class="sb-nav-link-icon"><i class="fas fa-tachometer-alt"></i></div>
+                            Inicio
+                        </a>
+
+                        <!-- ADMINISTRACIÓN -->
+                        @if (permisos.Contains("Administración") || esAdmin)
+                        {
+                            bool admin = controller == "Usuario" || controller == "Rol" || controller == "Permisos";
+                            <a class="nav-link @(admin ? "" : "collapsed")" href="#" data-bs-toggle="collapse" data-bs-target="#collapseAdmin" aria-expanded="@(admin.ToString().ToLower())">
+                                <div class="sb-nav-link-icon"><i class="fas fa-users-cog"></i></div>
+                                Administración
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse @(admin ? "show" : "")" id="collapseAdmin">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Contains("Usuarios") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Usuario" ? "active" : "")" href="@Url.Action("Index", "Usuario")">
+                                            <i class="fas fa-user me-2"></i>Usuarios
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Roles") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Rol" ? "active" : "")" href="@Url.Action("Index", "Rol")">
+                                            <i class="fas fa-user-shield me-2"></i>Roles
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Permisos") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Permisos" && ViewContext.RouteData.Values["action"].ToString() != "Mantenimiento" ? "active" : "")" href="@Url.Action("Index", "Permisos")">
+                                            <i class="fas fa-key me-2"></i>Permisos
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("MantPermisos") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Permisos" && ViewContext.RouteData.Values["action"].ToString() == "Mantenimiento" ? "active" : "")"
+                                           href="@Url.Action("Mantenimiento", "Permisos")">
+                                            <i class="fas fa-tools me-2"></i>Mant. Permisos
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- CONFIGURACIÓN -->
+                        @if (permisos.Contains("Configuración") || esAdmin)
+                        {
+                            bool config = controller == "TipoPago" || controller == "TipoProducto" || controller == "Medida" || controller == "TipoCompra" || controller == "TipoVenta";
+                            <a class="nav-link @(config ? "" : "collapsed")" href="#" data-bs-toggle="collapse" data-bs-target="#collapseConfig" aria-expanded="@(config.ToString().ToLower())">
+                                <div class="sb-nav-link-icon"><i class="fas fa-cogs"></i></div>
+                                Configuración
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse @(config ? "show" : "")" id="collapseConfig">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Contains("Tipo de Pago") || permisos.Contains("TipoPago") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "TipoPago" ? "active" : "")" href="@Url.Action("Index","TipoPago")">
+                                            <i class="fas fa-wallet me-2"></i>Tipo de Pago
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Tipo de Producto") || permisos.Contains("TipoProducto") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "TipoProducto" ? "active" : "")" href="@Url.Action("Index","TipoProducto")">
+                                            <i class="fas fa-tags me-2"></i>Tipo de Producto
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Tipo de Compra") || permisos.Contains("TipoCompra") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "TipoCompra" ? "active" : "")" href="@Url.Action("Index","TipoCompra")">
+                                            <i class="fas fa-shopping-bag me-2"></i>Tipo de Compra
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Tipo de Venta") || permisos.Contains("TipoVenta") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "TipoVenta" ? "active" : "")" href="@Url.Action("Index","TipoVenta")">
+                                            <i class="fas fa-shopping-bag me-2"></i>Tipo de Venta
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Medidas") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Medida" ? "active" : "")" href="@Url.Action("Index","Medida")">
+                                            <i class="fas fa-ruler me-2"></i>Medidas
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- COMPRA -->
+                        @if (permisos.Contains("Compra") || esAdmin)
+                        {
+                            bool compra = controller == "Compra" || controller == "Proveedor" || controller == "InsumoProducto" || controller == "Insumo";
+                            <a class="nav-link @(compra ? "" : "collapsed")" href="#" data-bs-toggle="collapse" data-bs-target="#collapseCompra" aria-expanded="@(compra.ToString().ToLower())">
+                                <div class="sb-nav-link-icon"><i class="fas fa-shopping-cart"></i></div>
+                                Compra
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse @(compra ? "show" : "")" id="collapseCompra">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Contains("Compras") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Compra" ? "active" : "")" href="@Url.Action("Index","Compra")">
+                                            <i class="fas fa-file-invoice-dollar me-2"></i>Compras
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Proveedores") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Proveedor" ? "active" : "")" href="@Url.Action("Index","Proveedor")">
+                                            <i class="fas fa-truck me-2"></i>Proveedores
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Insumo de Producto") || permisos.Contains("InsumoProducto") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "InsumoProducto" ? "active" : "")" href="@Url.Action("Index","InsumoProducto")">
+                                            <i class="fas fa-link me-2"></i>Insumo de Producto
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Insumos") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Insumo" ? "active" : "")" href="@Url.Action("Index","Insumo")">
+                                            <i class="fas fa-boxes me-2"></i>Insumos
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- VENTA -->
+                        @if (permisos.Contains("Venta") || esAdmin)
+                        {
+                            bool venta = controller == "Venta" || controller == "Cliente" || controller == "Producto";
+                            <a class="nav-link @(venta ? "" : "collapsed")" href="#" data-bs-toggle="collapse" data-bs-target="#collapseVenta" aria-expanded="@(venta.ToString().ToLower())">
+                                <div class="sb-nav-link-icon"><i class="fas fa-cash-register"></i></div>
+                                Venta
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse @(venta ? "show" : "")" id="collapseVenta">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Contains("Ventas") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Venta" ? "active" : "")" href="@Url.Action("Index","Venta")">
+                                            <i class="fas fa-file-invoice me-2"></i>Ventas
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Clientes") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Cliente" ? "active" : "")" href="@Url.Action("Index","Cliente")">
+                                            <i class="fas fa-user-friends me-2"></i>Clientes
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Productos") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Producto" ? "active" : "")" href="@Url.Action("Index","Producto")">
+                                            <i class="fas fa-box me-2"></i>Productos
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- STOCK -->
+                        @if (permisos.Contains("Stock") || esAdmin)
+                        {
+                            bool stock = controller == "Stock" || controller == "Polleria";
+                            <a class="nav-link @(stock ? "" : "collapsed")" href="#" data-bs-toggle="collapse" data-bs-target="#collapseStock" aria-expanded="@(stock.ToString().ToLower())">
+                                <div class="sb-nav-link-icon"><i class="fas fa-warehouse"></i></div>
+                                Stock
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse @(stock ? "show" : "")" id="collapseStock">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Contains("Stock General") || permisos.Contains("StockGeneral") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Stock" ? "active" : "")" href="@Url.Action("Productos","Stock")">
+                                            <i class="fas fa-layer-group me-2"></i>Stock General
+                                        </a>
+                                    }
+                                    @if (permisos.Contains("Pollería") || permisos.Contains("Polleria") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "Polleria" ? "active" : "")" href="@Url.Action("Index","Polleria")">
+                                            <i class="fas fa-drumstick-bite me-2"></i>Pollería
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                        <!-- REPORTES -->
+                        @if (permisos.Contains("Reportes") || esAdmin)
+                        {
+                            bool report = controller == "ReportVentas" || controller == "ReporteVenta" || controller == "ReporteCompra" || controller == "ReporteStock";
+                            <a class="nav-link @(report ? "" : "collapsed")" href="#" data-bs-toggle="collapse" data-bs-target="#collapseReport" aria-expanded="@(report.ToString().ToLower())">
+                                <div class="sb-nav-link-icon"><i class="fas fa-chart-line"></i></div>
+                                Reportes
+                                <div class="sb-sidenav-collapse-arrow"><i class="fas fa-angle-down"></i></div>
+                            </a>
+                            <div class="collapse @(report ? "show" : "")" id="collapseReport">
+                                <nav class="sb-sidenav-menu-nested nav">
+                                    @if (permisos.Contains("Reporte de Ventas") || permisos.Contains("ReporteVentas") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "ReportVentas" ? "active" : "")" href="@Url.Action("Index", "ReportVentas")">
+                                            <i class="fas fa-chart-bar me-2"></i>Reporte de Ventas
+                                        </a>
+                                    }
+
+                                    @if (permisos.Contains("Reporte de Compras") || permisos.Contains("ReporteCompras") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "ReportCompras" ? "active" : "")" href="@Url.Action("Index", "ReportCompras")">
+                                            <i class="fas fa-file-invoice-dollar me-2"></i>Reporte de Compras
+                                        </a>
+                                    }
+
+                                    @if (permisos.Contains("Reporte de Stock") || permisos.Contains("ReporteStock") || esAdmin)
+                                    {
+                                        <a class="nav-link @(controller == "ReportStock" ? "active" : "")" href="@Url.Action("Index", "ReportStock")">
+                                            <i class="fas fa-clipboard-list me-2"></i>Reporte de Stock
+                                        </a>
+                                    }
+                                </nav>
+                            </div>
+                        }
+
+                    </div>
+                </div>
+            </nav>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div id="layoutSidenav_content">
+            <main>
+                <div class="container-fluid px-4">
+                    @RenderBody()
+                </div>
+            </main>
+
+            <footer class="py-4 bg-light mt-auto">
+                <div class="container-fluid px-4 text-center">
+                    <div class="text-muted">© Sistema 2026 - Todos los derechos reservados</div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validation-unobtrusive/3.2.12/jquery.validate.unobtrusive.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/toastr.min.js"></script>
+    <script src="~/Scripts/sweetalerts.js"></script>
+    <script src="~/Scripts/JavaScript.js"></script>
+    @RenderSection("JavaScript", required: false)
+    @RenderSection("Styles", required: false)
+
+<script>
+    $(document).ready(function () {
+        var accionActual = '@ViewContext.RouteData.Values["action"]';
+
+        var mensajeExito = '@Html.Raw(HttpUtility.JavaScriptStringEncode((TempData["Exito"] ?? TempData["SuccessMessage"]) as string ?? ""))';
+        if (mensajeExito && mensajeExito.trim() !== '') {
+            mostrarExito(mensajeExito);
+        }
+
+        var mensajeError = '@Html.Raw(HttpUtility.JavaScriptStringEncode((TempData["Error"] ?? TempData["ErrorMessage"]) as string ?? ""))';
+        if (mensajeError && mensajeError.trim() !== '' && accionActual !== 'Delete') {
+            mostrarError(mensajeError);
+        }
+    });
+</script>
+</body>
+</html>

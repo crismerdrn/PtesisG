@@ -1,0 +1,152 @@
+﻿@model List<CapaModelo.CMTipoCompra>
+@{
+    var tiposCompra = Model ?? new List<CapaModelo.CMTipoCompra>();
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-shopping-cart me-2 text-primary"></i>Listado de Tipos de Compra</h2>
+    </div>
+
+    @if (ViewBag.PuedeCrear == null || ViewBag.PuedeCrear == true)
+    {
+        <div class="mb-3">
+            @Html.ActionLink("Agregar Tipo de Compra", "Create", null,
+                new { @class = "btn btn-primary shadow-sm", @id = "btnCrear" })
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "TipoCompra")"
+                  class="row g-2 align-items-center" id="formBusqueda">
+                <div class="col-md-9 col-lg-10">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar"
+                               class="form-control" placeholder="Buscar por nombre o descripción..."
+                               maxlength="50" id="txtBuscar" />
+                    </div>
+                </div>
+                <div class="col-md-3 col-lg-2 d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success w-50" id="btnBuscar">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                    <a href="@Url.Action("Index", "TipoCompra")" class="btn btn-secondary w-50" id="btnLimpiar">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle mb-0" id="tablaTiposCompra">
+            <thead class="table-light">
+                <tr>
+                    <th>Nombre</th>
+                    <th>Descripción</th>
+                    <th class="text-center">Categoría Base</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Fecha Registro</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (tiposCompra.Any())
+                {
+                    foreach (var tc in tiposCompra)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@Html.Raw(HttpUtility.HtmlEncode(tc.Nombre))</strong>
+                            </td>
+                            <td>
+                                @if (!string.IsNullOrEmpty(tc.Descripcion))
+                                {
+                                    @Html.Raw(HttpUtility.HtmlEncode(tc.Descripcion))
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic">Sin descripción</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                <span class="badge bg-light text-dark border">@tc.CategoriaBase</span>
+                            </td>
+                            <td class="text-center">
+                                @if (tc.Estado)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @(tc.FechaRegistro != DateTime.MinValue ? tc.FechaRegistro.ToString("dd/MM/yyyy") : "-")
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    @if (ViewBag.PuedeEditar == null || ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Edit", new { id = tc.id_tipoCompra })"
+                                           class="btn btn-warning btn-sm"
+                                           title="Editar">
+                                            Editar
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEliminar == null || ViewBag.PuedeEliminar == true)
+                                    {
+                                        <a href="@Url.Action("Delete", new { id = tc.id_tipoCompra })"
+                                           class="btn btn-danger btn-sm ms-1"
+                                           title="Eliminar">
+                                            Eliminar
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEditar == false && ViewBag.PuedeEliminar == false)
+                                    {
+                                        <span class="text-muted small">Sin permisos</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br />
+                            @if (!string.IsNullOrEmpty(ViewBag.Buscar))
+                            {
+                                <text>No se encontraron tipos de compra para "@ViewBag.Buscar"</text>
+                            }
+                            else
+                            {
+                                <text>No se encontraron tipos de compra</text>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function sanitizeInput(input) {
+        if (!input) return '';
+        return input.replace(/[<>&"'`]/g, '');
+    }
+
+    document.getElementById('btnBuscar')?.addEventListener('click', function () {
+        var inputBuscar = document.getElementById('txtBuscar');
+        if (inputBuscar) {
+            inputBuscar.value = sanitizeInput(inputBuscar.value.trim());
+        }
+    });
+</script>

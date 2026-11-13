@@ -1,0 +1,147 @@
+﻿@model CapaModelo.CMProveedor
+@{
+    ViewBag.Title = "Agregar Proveedor";
+}
+
+<div class="container-fluid px-4">
+    @if (ViewData.ModelState.Any(x => x.Value.Errors.Any()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            <strong>Atención:</strong>
+            @Html.ValidationSummary(true, "", new { @class = "mb-0" })
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-truck me-2"></i>Agregar Proveedor</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Tipo de Proveedor:</label>
+                        <div class="form-check form-check-inline">
+                            @Html.RadioButtonFor(m => m.esEmpresa, false, new { @class = "form-check-input", id = "tipoPersona", @checked = "checked" })
+                            <label class="form-check-label" for="tipoPersona">Persona Natural</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            @Html.RadioButtonFor(m => m.esEmpresa, true, new { @class = "form-check-input", id = "tipoEmpresa" })
+                            <label class="form-check-label" for="tipoEmpresa">Empresa</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div id="camposPersona">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.Nombre, new { @class = "form-control", placeholder = "Nombre", maxlength = "250" })
+                                    @Html.LabelFor(m => m.Nombre)
+                                    @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "invalid-feedback d-block" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.Apellido, new { @class = "form-control", placeholder = "Apellido", maxlength = "250" })
+                                    @Html.LabelFor(m => m.Apellido)
+                                    @Html.ValidationMessageFor(m => m.Apellido, "", new { @class = "invalid-feedback d-block" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.CI, new { @class = "form-control", placeholder = "Cédula de Identidad", maxlength = "250" })
+                                    @Html.LabelFor(m => m.CI)
+                                    @Html.ValidationMessageFor(m => m.CI, "", new { @class = "invalid-feedback d-block" })
+                                    <small class="form-text text-muted">Ejemplo: 1234567 LP</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="camposEmpresa" style="display: none;">
+                        <div class="row g-3">
+                            <div class="col-md-12">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.RazonSocial, new { @class = "form-control", placeholder = "Razón Social", maxlength = "250" })
+                                    @Html.LabelFor(m => m.RazonSocial)
+                                    @Html.ValidationMessageFor(m => m.RazonSocial, "", new { @class = "invalid-feedback d-block" })
+                                </div>
+                            </div>
+
+                            <div class="col-md-12">
+                                <div class="form-floating">
+                                    @Html.TextBoxFor(m => m.NIT, new { @class = "form-control", placeholder = "NIT", maxlength = "50" })
+                                    @Html.LabelFor(m => m.NIT)
+                                    @Html.ValidationMessageFor(m => m.NIT, "", new { @class = "invalid-feedback d-block" })
+                                    <small class="form-text text-muted">Ejemplo: 123456789</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Telefono, new { @class = "form-control", placeholder = "Teléfono", maxlength = "250" })
+                            @Html.LabelFor(m => m.Telefono)
+                            @Html.ValidationMessageFor(m => m.Telefono, "", new { @class = "invalid-feedback d-block" })
+                            <small class="form-text text-muted">Solo números</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Email, new { @class = "form-control", placeholder = "Email", type = "email", maxlength = "250" })
+                            @Html.LabelFor(m => m.Email)
+                            @Html.ValidationMessageFor(m => m.Email, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.Direccion, new { @class = "form-control", placeholder = "Dirección", maxlength = "250", rows = "3", style = "height: 100px" })
+                            @Html.LabelFor(m => m.Direccion)
+                            @Html.ValidationMessageFor(m => m.Direccion, "", new { @class = "invalid-feedback d-block" })
+                        </div>
+                    </div>
+
+                    <div class="col-12 mt-3">
+                        <div class="form-check form-switch">
+                            @Html.CheckBoxFor(m => m.Estado, new { @class = "form-check-input", role = "switch", @checked = "checked" })
+                            @Html.LabelFor(m => m.Estado, new { @class = "form-check-label fw-bold" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-success px-4" id="btnGuardar">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", null, new { @class = "btn btn-secondary px-4" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script src="~/Scripts/validacion-proveedor.js?v=@DateTime.Now.Ticks"></script>
+    <script>
+        $(document).ready(function () {
+            inicializarFormularioProveedor({
+                urlVerificarDuplicado: '@Url.Action("VerificarDuplicado", "Proveedor")'
+            });
+        });
+    </script>
+}

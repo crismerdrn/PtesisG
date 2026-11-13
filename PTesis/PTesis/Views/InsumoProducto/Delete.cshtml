@@ -1,0 +1,78 @@
+﻿@model CapaModelo.CMInsumoProducto
+
+@{
+    ViewBag.Title = "Eliminar Asignación";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-trash-alt me-2"></i>Eliminar Asignación</h4>
+        </div>
+
+        <div class="card-body">
+            <div class="alert alert-warning">
+                <h5 class="alert-heading">
+                    <i class="fas fa-exclamation-triangle me-2"></i>¿Está seguro de eliminar esta asignación?
+                </h5>
+                <p class="mb-0">
+                    Esta acción eliminará la relación entre el insumo y el producto.
+                    <strong>Esta operación no se puede deshacer.</strong>
+                </p>
+            </div>
+
+            <div class="card border-0">
+                <div class="card-body">
+                    <dl class="row">
+                        <dt class="col-sm-4">Producto:</dt>
+                        <dd class="col-sm-8">@Model.NombreProducto</dd>
+
+                        <dt class="col-sm-4">Insumo:</dt>
+                        <dd class="col-sm-8">@Model.NombreInsumo</dd>
+
+                        <dt class="col-sm-4">Cantidad Requerida:</dt>
+                        <dd class="col-sm-8">@Model.cantidad_requerida.ToString("N4") @Model.AbreviaturaMedida</dd>
+
+                        <dt class="col-sm-4">Observaciones:</dt>
+                        <dd class="col-sm-8">@(string.IsNullOrEmpty(Model.observaciones) ? "Ninguna" : Model.observaciones)</dd>
+
+                        <dt class="col-sm-4">Estado:</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge @(Model.estado ? "bg-success" : "bg-danger")">
+                                @(Model.estado ? "Activo" : "Inactivo")
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4">Fecha Registro:</dt>
+                        <dd class="col-sm-8">@Model.fecha_registro.ToString("dd/MM/yyyy HH:mm")</dd>
+
+                        @if (Model.fecha_actualizacion.HasValue)
+                        {
+                            <dt class="col-sm-4">Última Actualización:</dt>
+                            <dd class="col-sm-8">@Model.fecha_actualizacion.Value.ToString("dd/MM/yyyy HH:mm")</dd>
+                        }
+                    </dl>
+                </div>
+            </div>
+
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(model => model.id_insumo_producto)
+                @Html.HiddenFor(model => model.PRODUCTO_id_producto)
+
+                <!-- Agregar campo oculto para el filtro -->
+                <input type="hidden" name="idProducto" value="@Request.QueryString["idProducto"]" />
+
+                <div class="d-flex justify-content-start mt-4">
+                    <button type="submit" class="btn btn-danger me-2">
+                        <i class="fas fa-trash-alt me-1"></i> Confirmar Eliminación
+                    </button>
+                    @Html.ActionLink("Cancelar", "Index", "InsumoProducto",
+     new { idProducto = ViewBag.IdProductoFiltro ?? Model.PRODUCTO_id_producto },
+     new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

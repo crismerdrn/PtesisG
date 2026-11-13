@@ -1,0 +1,72 @@
+﻿@model CapaModelo.CMPermisos
+
+@{
+    ViewBag.Title = "Editar Permiso";
+}
+
+<div class="card shadow-sm border-0 mt-3">
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+        <h4 class="mb-0 text-primary"><i class="fas fa-edit me-2"></i>Editar Permiso</h4>
+        <a href="@Url.Action("Mantenimiento", "Permisos")" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-arrow-left me-1"></i> Volver a la Lista
+        </a>
+    </div>
+    <div class="card-body">
+        @using (Html.BeginForm("Edit", "Permisos", FormMethod.Post))
+        {
+            @Html.AntiForgeryToken()
+            @Html.HiddenFor(m => m.id_permiso)
+
+            <div class="row g-3">
+                <!-- Nombre del Menú / Acción -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Nombre del Menú / Permiso</label>
+                    @Html.TextBoxFor(m => m.NombreMenu, new { @class = "form-control", placeholder = "Ej: Ventas, Stock General, Ver Clientes", required = "required" })
+                    @Html.ValidationMessageFor(m => m.NombreMenu, "", new { @class = "text-danger" })
+                </div>
+
+                <!-- Módulo -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Módulo</label>
+                    @Html.TextBoxFor(m => m.Modulo, new { @class = "form-control", placeholder = "Ej: VENTA, STOCK, ADMIN", required = "required" })
+                    @Html.ValidationMessageFor(m => m.Modulo, "", new { @class = "text-danger" })
+                </div>
+
+                <!-- Tipo -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Tipo</label>
+                    @Html.DropDownListFor(m => m.Tipo, (IEnumerable<SelectListItem>)ViewBag.Tipos, new { @class = "form-select" })
+                    @Html.ValidationMessageFor(m => m.Tipo, "", new { @class = "text-danger" })
+                </div>
+
+                <!-- Menú Padre -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Menú Padre</label>
+                    @Html.DropDownListFor(m => m.Padre_id, (IEnumerable<SelectListItem>)ViewBag.PermisosPadre, new { @class = "form-select" })
+                    <small class="text-muted">Seleccione solo si es submenú o acción hija.</small>
+                </div>
+
+                <!-- Orden -->
+                <div class="col-md-6">
+                    <label class="form-label fw-bold">Orden</label>
+                    @Html.TextBoxFor(m => m.Orden, new { @class = "form-control", type = "number", min = "1" })
+                    @Html.ValidationMessageFor(m => m.Orden, "", new { @class = "text-danger" })
+                </div>
+
+                <!-- Descripción -->
+                <div class="col-12">
+                    <label class="form-label fw-bold">Descripción</label>
+                    @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control", rows = "3", placeholder = "Descripción detallada del permiso..." })
+                    @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "text-danger" })
+                </div>
+            </div>
+
+            <div class="mt-4 pt-3 border-top d-flex gap-2">
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save me-1"></i> Guardar Cambios
+                </button>
+                <a href="@Url.Action("Mantenimiento", "Permisos")" class="btn btn-secondary">Cancelar</a>
+            </div>
+        }
+    </div>
+</div>

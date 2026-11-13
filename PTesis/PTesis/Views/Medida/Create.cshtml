@@ -1,0 +1,60 @@
+﻿@model CapaModelo.CMMedida
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-primary text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-ruler me-2"></i>Agregar Medida</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm("Create", "Medida", FormMethod.Post, new { id = "formCreate" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Descripcion, new { @class = "form-control", placeholder = "Descripción", maxlength = "100" })
+                            @Html.LabelFor(m => m.Descripcion)
+                            @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Abreviatura, new { @class = "form-control", placeholder = "Abreviatura", maxlength = "20" })
+                            @Html.LabelFor(m => m.Abreviatura)
+                            @Html.ValidationMessageFor(m => m.Abreviatura, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-success me-2" id="btnGuardar">
+                        <i class="fas fa-save me-1"></i> Guardar
+                    </button>
+                    @Html.ActionLink("Volver al Listado", "Index", null, new { @class = "btn btn-secondary", @id = "btnVolver" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var form = document.getElementById('formCreate');
+        var btnGuardar = document.getElementById('btnGuardar');
+
+        if (form && btnGuardar) {
+            form.addEventListener('submit', function () {
+                if ($(form).valid()) {
+                    btnGuardar.disabled = true;
+                    btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+                }
+            });
+        }
+    });
+</script>

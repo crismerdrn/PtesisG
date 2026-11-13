@@ -1,0 +1,169 @@
+﻿@model CapaModelo.CMCompra
+
+@{
+    ViewBag.Title = "Anular Compra";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-danger text-white rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-ban me-2"></i>Anular Compra</h4>
+        </div>
+
+        <div class="card-body">
+            @if (ViewBag.MostrarAdvertenciaStock)
+            {
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    <strong>¡ADVERTENCIA IMPORTANTE!</strong>
+                    <p class="mb-0 mt-2">
+                        @ViewBag.Advertencia
+                        <br>
+                        <strong>Esta acción no se puede deshacer.</strong>
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Información:</strong> Está a punto de anular la compra <strong>#@Model.id_compra</strong>
+                </div>
+            }
+
+            <!-- Información de la compra -->
+            <div class="card border mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Proveedor</label>
+                            <p class="fw-bold mb-0">@Model.NombreProveedor</p>
+                            <small class="text-muted">@Model.DocumentoProveedor</small>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Fecha de Compra</label>
+                            <p class="fw-bold mb-0">@Model.FechaCompra.ToString("dd/MM/yyyy HH:mm")</p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Estado Actual</label>
+                            <p class="mb-0">
+                                @if (Model.Estado == "COMPLETADA")
+                                {
+                                    <span class="badge bg-success">COMPLETADA</span>
+                                }
+                                else if (Model.Estado == "PENDIENTE")
+                                {
+                                    <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">@Model.Estado</span>
+                                }
+                            </p>
+                        </div>
+
+                        <div class="col-md-6 mb-3">
+                            <label class="small text-muted">Monto Total</label>
+                            <h5 class="text-primary fw-bold mb-0">Bs. @Model.MontoTotal.ToString("0.00")</h5>
+                        </div>
+
+                        <div class="col-md-12">
+                            <label class="small text-muted">Detalles</label>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Item</th>
+                                            <th class="text-center">Cantidad</th>
+                                            <th class="text-end">Subtotal</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @if (Model.Detalles != null && Model.Detalles.Any())
+                                        {
+                                            foreach (var detalle in Model.Detalles)
+                                            {
+                                                <tr>
+                                                    <td>
+                                                        <small>@detalle.NombreItem</small>
+                                                        <br />
+                                                        <span class="badge bg-light text-dark">@detalle.TipoItem</span>
+                                                    </td>
+                                                    <td class="text-center">@detalle.cantidad</td>
+                                                    <td class="text-end">Bs. @detalle.subtotal.ToString("0.00")</td>
+                                                </tr>
+                                            }
+                                        }
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            @using (Html.BeginForm("Anular", "Compra", new { id = Model.id_compra }, FormMethod.Post))
+            {
+                @Html.AntiForgeryToken()
+
+                <div class="mb-4">
+                    <label class="form-label fw-bold">Motivo de Anulación *</label>
+                    <textarea name="motivo" class="form-control" rows="4" required
+                              placeholder="Describa el motivo por el cual está anulando esta compra..."></textarea>
+                    <small class="text-muted">Este motivo quedará registrado en el historial del sistema.</small>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-between">
+                    <div>
+                        @Html.ActionLink("Cancelar", "Details", new { id = Model.id_compra },
+                            new { @class = "btn btn-secondary px-4" })
+                    </div>
+                    <div>
+                        <button type="submit" class="btn btn-danger px-4" onclick="return confirmarAnulacion()">
+                            <i class="fas fa-ban me-1"></i> Confirmar Anulación
+                        </button>
+                    </div>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript{
+    <script>
+        function confirmarAnulacion() {
+            const motivo = document.querySelector('textarea[name="motivo"]').value.trim();
+
+            if (!motivo) {
+                alert('Debe ingresar un motivo para la anulación.');
+                return false;
+            }
+
+            @if (Model.Estado == "COMPLETADA")
+            {
+                <text>
+                const mensaje = "¿ESTÁ SEGURO DE ANULAR ESTA COMPRA?\n\n" +
+                    "⚠️ ADVERTENCIA: La compra está COMPLETADA. Esta acción:\n" +
+                    "1. Revertirá todo el stock agregado por esta compra\n" +
+                    "2. Marcará la compra como ANULADA\n" +
+                    "3. Esta acción NO se puede deshacer\n\n" +
+                    "Motivo: " + motivo;
+                </text>
+            }
+            else
+            {
+                <text>
+                const mensaje = "¿Está seguro de anular esta compra?\n\n" +
+                    "Esta acción no se puede deshacer.\n\n" +
+                    "Motivo: " + motivo;
+                </text>
+            }
+
+            return confirm(mensaje);
+        }
+    </script>
+}

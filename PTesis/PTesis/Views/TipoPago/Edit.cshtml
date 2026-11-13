@@ -1,0 +1,50 @@
+﻿@model CapaModelo.CMTipoPago
+
+<link href="~/Content/ValidacionTipoPago.css" rel="stylesheet" />
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-light border-0 rounded-top-4">
+            <h4 class="mb-0 text-dark"><i class="fas fa-edit me-2"></i>Editar Tipo de Pago</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm(null, null, FormMethod.Post, new { novalidate = "novalidate" }))
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_tipoPago)
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.nombre, new { @class = "form-control", placeholder = "Nombre" })
+                            @Html.LabelFor(m => m.nombre)
+                            @Html.ValidationMessageFor(m => m.nombre, "", new { @class = "text-danger small fw-semibold" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.descripcion, new { @class = "form-control", placeholder = "Descripción" })
+                            @Html.LabelFor(m => m.descripcion)
+                            @Html.ValidationMessageFor(m => m.descripcion, "", new { @class = "text-danger small fw-semibold" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    @Scripts.Render("~/bundles/jqueryval")
+}

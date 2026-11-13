@@ -1,0 +1,180 @@
+﻿@model List<CapaModelo.CMTipoProducto>
+@{
+    var tiposProducto = Model ?? new List<CapaModelo.CMTipoProducto>();
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-box-open me-2 text-primary"></i>Listado de Tipos de Producto</h2>
+    </div>
+
+    @if (ViewBag.PuedeCrear == true)
+    {
+        <div class="mb-3">
+            @Html.ActionLink("Agregar Tipo de Producto", "Create", null,
+                new { @class = "btn btn-primary shadow-sm", @id = "btnCrear" })
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "TipoProducto")"
+                  class="row g-2 align-items-center" id="formBusqueda">
+                <div class="col-md-9 col-lg-10">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar"
+                               class="form-control" placeholder="Buscar por descripción..."
+                               maxlength="50" id="txtBuscar" />
+                    </div>
+                </div>
+                <div class="col-md-3 col-lg-2 d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success w-50" id="btnBuscar">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                    <a href="@Url.Action("Index", "TipoProducto")" class="btn btn-secondary w-50" id="btnLimpiar">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert" id="alertSuccess">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert" id="alertError">
+            <i class="fas fa-exclamation-circle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <script>
+        function sanitizeInput(input) {
+            if (!input) return '';
+            return input.replace(/[<>&"'`]/g, '');
+        }
+
+        document.getElementById('btnBuscar')?.addEventListener('click', function () {
+            var inputBuscar = document.getElementById('txtBuscar');
+            if (inputBuscar) {
+                inputBuscar.value = sanitizeInput(inputBuscar.value.trim());
+            }
+        });
+    </script>
+
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle mb-0" id="tablaTiposProducto">
+            <thead class="table-light">
+                <tr>
+                    <th>Descripción</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Fecha Registro</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (tiposProducto.Any())
+                {
+                    foreach (var tp in tiposProducto)
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(tp.descripcion))
+                                {
+                                    @Html.Raw(HttpUtility.HtmlEncode(tp.descripcion))
+                                }
+                                else
+                                {
+                                    <span class="text-muted fst-italic">Sin descripción</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                @if (tp.estado)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                @if (tp.fecha_registro != DateTime.MinValue)
+                                {
+                                    @tp.fecha_registro.ToString("dd/MM/yyyy")
+                                }
+                                else
+                                {
+                                    <span class="text-muted">-</span>
+                                }
+                            </td>
+
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    @if (ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Edit", new { id = tp.id_tipoProducto })"
+                                           class="btn btn-warning btn-sm"
+                                           title="Editar">
+                                            Editar
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEliminar == true)
+                                    {
+                                        <a href="@Url.Action("Delete", new { id = tp.id_tipoProducto })"
+                                           class="btn btn-danger btn-sm ms-1"
+                                           title="Eliminar">
+                                            Eliminar
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEditar != true && ViewBag.PuedeEliminar != true)
+                                    {
+                                        <span class="text-muted small">Sin permisos</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br />
+                            @if (!string.IsNullOrEmpty(ViewBag.Buscar))
+                            {
+                                <text>No se encontraron tipos de producto para "@ViewBag.Buscar"</text>
+                            }
+                            else
+                            {
+                                <text>No se encontraron tipos de producto</text>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    setTimeout(function () {
+        var alerts = document.querySelectorAll('.alert');
+        alerts.forEach(function (alert) {
+            var bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        });
+    }, 5005);
+</script>

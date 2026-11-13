@@ -1,0 +1,101 @@
+﻿@model CapaModelo.CMRol
+
+@{
+    ViewBag.Title = "Editar Rol";
+}
+
+<div class="container-fluid px-4">
+    @if (ViewData.ModelState.Any(x => x.Value.Errors.Any()))
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>
+            @Html.ValidationSummary(true, "", new { @class = "mb-0" })
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Rol</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_rol)
+
+                <div class="row g-3">
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Nombre,
+                                new
+                                     {
+                                    @class = "form-control" + (ViewData.ModelState["Nombre"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Nombre",
+                                    maxlength = "50"
+                                })
+                            @Html.LabelFor(m => m.Nombre)
+                            @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "invalid-feedback d-block" })
+                            <small class="form-text text-muted">Mínimo 3 caracteres, máximo 50. Solo letras y espacios.</small>
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.Descripcion,
+                                new
+                                     {
+                                    @class = "form-control" + (ViewData.ModelState["Descripcion"]?.Errors?.Count > 0 ? " is-invalid" : ""),
+                                    placeholder = "Descripción",
+                                    style = "height: 120px",
+                                    maxlength = "200"
+                                })
+                            @Html.LabelFor(m => m.Descripcion)
+                            @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "invalid-feedback d-block" })
+                            <small class="form-text text-muted">Mínimo 10 caracteres, máximo 200.</small>
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end gap-2">
+                    <button type="submit" class="btn btn-warning">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver a la Lista", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript  {
+    <script>
+        document.getElementById('Nombre').addEventListener('input', function (e) {
+            this.value = this.value.replace(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ\s]/g, '');
+        });
+
+        document.getElementById('Descripcion').addEventListener('input', function (e) {
+            const maxLength = 200;
+            const currentLength = this.value.length;
+            const counter = document.getElementById('descripcion-counter') ||
+                (function () {
+                    const counter = document.createElement('small');
+                    counter.id = 'descripcion-counter';
+                    counter.className = 'form-text text-muted text-end d-block mt-1';
+                    this.parentNode.appendChild(counter);
+                    return counter;
+                }).call(this);
+
+            counter.textContent = `${currentLength}/${maxLength} caracteres`;
+
+            if (currentLength > maxLength) {
+                counter.classList.add('text-danger');
+            } else {
+                counter.classList.remove('text-danger');
+            }
+        });
+    </script>
+}

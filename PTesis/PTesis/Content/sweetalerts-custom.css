@@ -1,0 +1,61 @@
+﻿/* sweetalerts-custom.css - Estilos mínimos personalizados */
+
+/* Ajustes generales para SweetAlert2 */
+.swal2-popup.sweet-alert-custom {
+    border-radius: 10px !important;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif !important;
+}
+
+/* Toast notifications */
+.swal2-toast.sweet-alert-custom {
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    border-left: 4px solid transparent !important;
+}
+
+    /* Colores para cada tipo */
+    .swal2-toast.sweet-alert-custom.swal2-success {
+        border-left-color: #28a745 !important;
+    }
+
+    .swal2-toast.sweet-alert-custom.swal2-error {
+        border-left-color: #dc3545 !important;
+    }
+
+    .swal2-toast.sweet-alert-custom.swal2-warning {
+        border-left-color: #ffc107 !important;
+    }
+
+    .swal2-toast.sweet-alert-custom.swal2-info {
+        border-left-color: #17a2b8 !important;
+    }
+
+/* Animación de entrada para toast */
+@keyframes sweetSlideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+.swal2-show {
+    animation: sweetSlideIn 0.3s ease-out !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .swal2-popup {
+        width: 90% !important;
+        margin: 10px !important;
+    }
+
+    .swal2-toast {
+        width: 90% !important;
+        margin: 5px !important;
+    }
+}

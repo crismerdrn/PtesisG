@@ -1,0 +1,453 @@
+﻿@model CapaModelo.CMVenta
+
+@{
+    ViewBag.Title = "Nueva Venta";
+}
+
+<div class="container-fluid px-4 py-3">
+    <!-- Header Principal -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h3 class="mb-0 text-success fw-bold">
+                <i class="fas fa-cash-register me-2"></i>Nueva Venta (POS)
+            </h3>
+            <small class="text-muted">Registro de comandas y consumo en tiempo real</small>
+        </div>
+        <div>
+            @Html.ActionLink("Volver al Listado", "Index", null, new { @class = "btn btn-outline-secondary btn-sm rounded-pill px-3" })
+        </div>
+    </div>
+
+    <!-- Alertas de Stock Server-Side -->
+    @if (ViewBag.ValidacionesStock != null)
+    {
+        <div class="alert alert-danger shadow-sm rounded-3">
+            <h6 class="fw-bold mb-2"><i class="fas fa-exclamation-triangle me-2"></i>Validaciones de Stock:</h6>
+            <ul class="mb-0 small">
+                @foreach (var validacion in ViewBag.ValidacionesStock)
+                {
+                    <li>@validacion.Mensaje</li>
+                }
+            </ul>
+        </div>
+    }
+
+    @using (Html.BeginForm("Create", "Venta", FormMethod.Post, new { id = "formVenta" }))
+    {
+        @Html.AntiForgeryToken()
+        <input type="hidden" id="detallesJson" name="detallesJson" />
+
+        <!-- Bloque 1: Cabecera y Parámetros de Venta -->
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-body p-4">
+                <div class="row g-3">
+                    <!-- Cliente -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-secondary">Cliente</label>
+                        <div class="input-group">
+                            @Html.DropDownListFor(m => m.CLIENTE_id_cliente,
+                                ViewBag.ListaClientes as SelectList,
+                                "Cliente General",
+                                new { @class = "form-select", id = "ClienteSelect" })
+                            <button type="button" class="btn btn-outline-success" onclick="agregarClienteRapido()" title="Registrar cliente rápido">
+                                <i class="fas fa-user-plus"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Forma de Pago -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-secondary">Forma de Pago *</label>
+                        @Html.DropDownListFor(m => m.TipoPago,
+                            ViewBag.ListaTiposPago as IEnumerable<SelectListItem>,
+                            new { @class = "form-select", id = "TipoPagoSelect", required = "required" })
+                    </div>
+
+                    <!-- Canal de Venta -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-secondary">Tipo de Venta (Canal) *</label>
+                        @Html.DropDownListFor(m => m.TIPO_VENTA_id_tipoVenta,
+                            ViewBag.ListaCanalesVenta as SelectList,
+                            new { @class = "form-select", id = "TipoVentaSelect", required = "required" })
+                    </div>
+
+                    <!-- Vendedor -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-secondary">Vendedor</label>
+                        <input type="text" class="form-control bg-light" value="@($"{ViewBag.UsuarioActual.nombre} {ViewBag.UsuarioActual.apellido}")" readonly />
+                    </div>
+
+                    <!-- Pollería -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-secondary">Pollería / Sucursal</label>
+                        <input type="text" class="form-control bg-light" value="@(ViewBag.Polleria?.Nombre ?? "El Escondite del Loro")" readonly />
+                    </div>
+
+                    <!-- Total Acumulado -->
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold small text-success">Total a Cobrar</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-success text-white fw-bold">Bs.</span>
+                            <input type="text" id="TotalVentaDisplay" class="form-control form-control-lg fw-bold text-end bg-light text-success" value="0.00" readonly />
+                        </div>
+                        @Html.HiddenFor(m => m.Total_venta, new { id = "TotalVenta" })
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bloque 2: Comanda y Detalles de Productos -->
+        <div class="card shadow-sm border-0 rounded-4 mb-4">
+            <div class="card-header bg-white border-bottom py-3">
+                <div class="row align-items-center g-2">
+                    <div class="col-md-4">
+                        <h5 class="mb-0 fw-bold text-secondary">
+                            <i class="fas fa-utensils me-2 text-warning"></i>Comanda / Productos
+                        </h5>
+                    </div>
+                    <!-- Buscador Inteligente -->
+                    <div class="col-md-8 position-relative">
+                        <div class="input-group">
+                            <span class="input-group-text bg-light border-end-0">
+                                <i class="fas fa-search text-muted"></i>
+                            </span>
+                            <input type="text" id="buscadorProducto" class="form-control border-start-0"
+                                   placeholder="Buscar plato, porción o bebida para agregar..."
+                                   autocomplete="off" />
+                            <button type="button" class="btn btn-primary" onclick="validarStockVenta()">
+                                <i class="fas fa-check-circle me-1"></i> Validar Disponibilidad
+                            </button>
+                        </div>
+                        <!-- Lista flotante de autocompletado -->
+                        <div id="resultadosBusqueda" class="list-group shadow position-absolute w-100 mt-1"
+                             style="z-index: 1050; max-height: 280px; overflow-y: auto; display: none;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body p-0">
+                <!-- Alertas Dinámicas de Stock Ajax -->
+                <div id="validacionContainer" class="alert d-none m-3 mb-0">
+                    <div id="validacionMensaje"></div>
+                    <div id="validacionDetalles" class="mt-2"></div>
+                </div>
+
+                <!-- Tabla de Comanda -->
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="tablaDetalles">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="ps-4" style="width: 35%;">Producto / Plato</th>
+                                <th class="text-center" style="width: 15%;">Cantidad</th>
+                                <th class="text-center" style="width: 15%;">Stock Disp.</th>
+                                <th class="text-end" style="width: 15%;">Precio Unit.</th>
+                                <th class="text-end" style="width: 15%;">Subtotal</th>
+                                <th class="text-center" style="width: 5%;">Quitar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cuerpoDetalles">
+                            <tr id="sinDetalles">
+                                <td colspan="6" class="text-center py-5 text-muted">
+                                    <i class="fas fa-shopping-basket fa-2x mb-2 d-block opacity-50"></i>
+                                    Aún no hay productos agregados a la comanda. Busque arriba para agregar.
+                                </td>
+                            </tr>
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <td colspan="4" class="text-end fw-bold py-3 fs-5">TOTAL GENERAL:</td>
+                                <td class="text-end fw-bold py-3 fs-5 text-success" id="totalVentaCalculado">Bs. 0.00</td>
+                                <td></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Botones de Acción -->
+        <div class="d-flex justify-content-between align-items-center mb-5">
+            <button type="button" class="btn btn-outline-danger px-4" onclick="limpiarFormulario()">
+                <i class="fas fa-trash me-1"></i> Cancelar Comanda
+            </button>
+            <div class="d-flex gap-2">
+                @Html.ActionLink("Volver", "Index", null, new { @class = "btn btn-secondary px-4" })
+                <button type="submit" class="btn btn-success btn-lg px-5 fw-bold shadow-sm" id="btnRegistrarVenta">
+                    <i class="fas fa-check-circle me-1"></i> Confirmar y Cobrar
+                </button>
+            </div>
+        </div>
+    }
+</div>
+
+@section JavaScript{
+    <script>
+        let detalles = [];
+
+        $(document).ready(function () {
+            // Buscador con debounce
+            let debounceTimer;
+            $('#buscadorProducto').on('input', function () {
+                clearTimeout(debounceTimer);
+                const termino = $(this).val().trim();
+                if (termino.length >= 2) {
+                    debounceTimer = setTimeout(() => buscarProductos(termino), 250);
+                } else {
+                    $('#resultadosBusqueda').hide().empty();
+                }
+            });
+
+            // Cerrar menú de búsqueda al hacer clic fuera
+            $(document).on('click', function (e) {
+                if (!$(e.target).closest('#buscadorProducto, #resultadosBusqueda').length) {
+                    $('#resultadosBusqueda').hide();
+                }
+            });
+
+            // Enter en el buscador agrega el primer ítem
+            $('#buscadorProducto').keypress(function (e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    const $primerResultado =$('#resultadosBusqueda a:first');
+                    if ($primerResultado.length) {$primerResultado.click();
+                    }
+                }
+            });
+        });
+
+        function buscarProductos(termino) {
+            $.post('@Url.Action("BuscarProductos", "Venta")', { term: termino }, function (productos) {
+                const $contenedor =$('#resultadosBusqueda');
+                $contenedor.empty();
+
+                if (!productos || productos.length === 0) {
+                    $contenedor.append(`
+                        <div class="list-group-item text-muted py-3 text-center">
+                            <i class="fas fa-info-circle me-1"></i> No se encontraron productos disponibles.
+                        </div>
+                    `);
+                } else {
+                    productos.forEach(function (p) {
+                        let badgeStock = p.stock > 0 ?
+                            `<span class="badge bg-success-subtle text-success border border-success-subtle">${p.stock} ${p.abreviatura}</span>` :
+                            `<span class="badge bg-danger-subtle text-danger border border-danger-subtle">Agotado</span>`;
+
+                        const itemHtml = $(`
+                            <a href="javascript:void(0)" class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2">
+                                <div>
+                                    <div class="fw-bold">${p.nombre}</div>
+                                    <small class="text-muted">${p.descripcion || ''}</small>
+                                </div>
+                                <div class="text-end">
+                                    <div class="fw-bold text-success">Bs. ${p.precio.toFixed(2)}</div>
+                                    ${badgeStock}
+                                </div>
+                            </a>
+                        `);
+
+                        itemHtml.on('click', function () {
+                            agregarProducto(p);
+                        });
+
+                        $contenedor.append(itemHtml);
+                    });
+                }
+                $contenedor.show();
+            });
+        }
+
+        function agregarProducto(p) {
+            const existe = detalles.some(d => d.IdProducto === p.id);
+            if (existe) {
+                alert('Este producto ya está en la comanda. Puede modificar su cantidad.');
+                $('#buscadorProducto').val('');
+                $('#resultadosBusqueda').hide();
+                return;
+            }
+
+            $('#sinDetalles').hide();
+
+            const nuevoDetalle = {
+                IdProducto: p.id,
+                nombre: p.nombre,
+                descripcion: p.descripcion,
+                medida: p.medida,
+                abreviatura: p.abreviatura,
+                precioUnitario: p.precio,
+                stockDisponible: p.stock,
+                cantidad: 1,
+                subtotal: p.precio
+            };
+
+            detalles.push(nuevoDetalle);
+            renderizarTabla();
+            actualizarTotal();
+
+            $('#buscadorProducto').val('');
+            $('#resultadosBusqueda').hide().empty();
+        }
+
+        function renderizarTabla() {
+            const tbody = $('#cuerpoDetalles');
+            tbody.empty();
+
+            if (detalles.length === 0) {
+                tbody.append(`
+                    <tr id="sinDetalles">
+                        <td colspan="6" class="text-center py-5 text-muted">
+                            <i class="fas fa-shopping-basket fa-2x mb-2 d-block opacity-50"></i>
+                            Aún no hay productos agregados a la comanda. Busque arriba para agregar.
+                        </td>
+                    </tr>
+                `);
+                return;
+            }
+
+            detalles.forEach((d, idx) => {
+                const tr = `
+                    <tr id="filaDetalle_${idx}">
+                        <td class="ps-4">
+                            <strong>${d.nombre}</strong>
+                            ${d.descripcion ? `<br/><small class="text-muted">${d.descripcion}</small>` : ''}
+                        </td>
+                        <td class="text-center">
+                            <input type="number" class="form-control form-control-sm text-center mx-auto"
+                                   style="max-width: 90px;"
+                                   min="1" step="1"
+                                   value="${d.cantidad}"
+                                   onchange="actualizarCantidad(${idx}, this.value)"
+                                   onkeyup="actualizarCantidad(${idx}, this.value)" />
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary-subtle text-secondary border">
+                                ${d.stockDisponible} ${d.abreviatura}
+                            </span>
+                        </td>
+                        <td class="text-end">Bs. ${d.precioUnitario.toFixed(2)}</td>
+                        <td class="text-end fw-bold text-success">Bs. ${d.subtotal.toFixed(2)}</td>
+                        <td class="text-center">
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="eliminarDetalle(${idx})">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </td>
+                    </tr>
+                `;
+                tbody.append(tr);
+            });
+        }
+
+        function actualizarCantidad(idx, valor) {
+            let cant = parseFloat(valor) || 0;
+            if (cant < 1) cant = 1;
+
+            detalles[idx].cantidad = cant;
+            detalles[idx].subtotal = cant * detalles[idx].precioUnitario;
+
+            renderizarTabla();
+            actualizarTotal();
+        }
+
+        function eliminarDetalle(idx) {
+            detalles.splice(idx, 1);
+            renderizarTabla();
+            actualizarTotal();
+        }
+
+        function actualizarTotal() {
+            const total = detalles.reduce((acc, item) => acc + item.subtotal, 0);
+            $('#totalVentaCalculado').text(`Bs. ${total.toFixed(2)}`);
+            $('#TotalVentaDisplay').val(total.toFixed(2));
+            $('#TotalVenta').val(total.toFixed(2));
+        }
+
+        function validarStockVenta() {
+            if (detalles.length === 0) {
+                mostrarResultadoValidacion('Agregue productos antes de validar', 'warning', false);
+                return;
+            }
+
+            const payload = detalles.map(d => ({
+                IdProducto: d.IdProducto,
+                cantidad: d.cantidad,
+                precioUnitario: d.precioUnitario,
+                subtotal: d.subtotal
+            }));
+
+            $.ajax({
+                url: '@Url.Action("ValidarStockVenta", "Venta")',
+                type: 'POST',
+                data: JSON.stringify({ detallesJson: JSON.stringify(payload) }),
+                contentType: 'application/json',
+                success: function (res) {
+                    mostrarResultadoValidacion(res.mensaje, res.stockSuficiente ? 'success' : 'danger', res.stockSuficiente, res.validaciones);
+                },
+                error: function () {
+                    mostrarResultadoValidacion('Error al conectar con la validación de stock', 'danger', false);
+                }
+            });
+        }
+
+        function mostrarResultadoValidacion(mensaje, tipo, esExitoso, validaciones) {
+            const $c =$('#validacionContainer');
+            $c.removeClass('alert-success alert-danger alert-warning d-none').addClass(`alert-${tipo}`);
+            $('#validacionMensaje').html(`<i class="fas fa-${esExitoso ? 'check' : 'exclamation'}-circle me-2"></i><strong>${mensaje}</strong>`);
+
+            if (validaciones && validaciones.length > 0) {
+                let html = '<ul class="mb-0 mt-2">';
+                validaciones.forEach(v => {
+                    html += `<li><i class="fas ${v.suficiente ? 'fa-check text-success' : 'fa-times text-danger'} me-1"></i> ${v.mensaje}</li>`;
+                });
+                html += '</ul>';
+                $('#validacionDetalles').html(html);
+            } else {
+                $('#validacionDetalles').empty();
+            }
+            $c.removeClass('d-none');
+        }
+
+        function agregarClienteRapido() {
+            const nombre = prompt('Nombre completo o Razón Social del cliente:');
+            if (!nombre) return;
+            const telefono = prompt('Teléfono o Celular:', '0000000');
+
+            $.post('@Url.Action("CrearClienteRapido", "Venta")', { nombre: nombre, telefono: telefono, email: 'cliente@pos.com' }, function (res) {
+                if (res.success) {
+                    const $select =$('#ClienteSelect');
+                    $select.append(new Option(res.cliente.text, res.cliente.id, true, true)).trigger('change');
+                    alert('Cliente agregado.');
+                } else {
+                    alert('Error: ' + res.message);
+                }
+            });
+        }
+
+        function limpiarFormulario() {
+            if (detalles.length > 0 && !confirm('¿Desea limpiar toda la venta actual?')) return;
+            detalles = [];
+            renderizarTabla();
+            actualizarTotal();
+            $('#formVenta')[0].reset();
+            $('#TotalVentaDisplay').val('0.00');
+            $('#validacionContainer').addClass('d-none');
+        }
+
+        $('#formVenta').submit(function (e) {
+            if (detalles.length === 0) {
+                e.preventDefault();
+                alert('Debe agregar al menos un producto a la comanda.');
+                return false;
+            }
+
+            const dataFinal = detalles.map(d => ({
+                IdProducto: d.IdProducto,
+                cantidad: d.cantidad,
+                precioUnitario: d.precioUnitario,
+                subtotal: d.subtotal
+            }));
+
+            $('#detallesJson').val(JSON.stringify(dataFinal));
+            $('#btnRegistrarVenta').prop('disabled', true).html('<i class="fas fa-spinner fa-spin me-2"></i>Registrando...');
+            return true;
+        });
+    </script>
+}

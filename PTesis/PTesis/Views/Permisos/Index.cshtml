@@ -1,0 +1,124 @@
+﻿@model List<CapaModelo.CMPermisos>
+@{
+    ViewBag.Title = "Permisos del Sistema";
+    var roles = ViewBag.Roles as SelectList;
+}
+
+<div class="container-fluid px-4">
+    <!-- Mensajes de éxito/error -->
+    @if (TempData["Success"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <!-- Título y botones -->
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <h2 class="fw-bold"><i class="fas fa-lock me-2 text-primary"></i>Permisos del Sistema</h2>
+
+        @if (roles != null && roles.Any())
+        {
+            <div class="d-flex gap-2">
+                @Html.DropDownList("rolSelector", roles, "Seleccionar Rol", new { @class = "form-select", id = "rolSelector" })
+                <button type="button" class="btn btn-primary" id="btnAsignarPermisos" disabled>
+                    <i class="fas fa-edit me-1"></i> Asignar Permisos
+                </button>
+                <button type="button" class="btn btn-info" id="btnVerPermisos" disabled>
+                    <i class="fas fa-eye me-1"></i> Ver Asignados
+                </button>
+            </div>
+        }
+    </div>
+
+    <hr />
+
+    <!-- Árbol de permisos -->
+    <div class="card shadow-sm border-0">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="fas fa-sitemap me-2"></i>Estructura de Permisos</h5>
+        </div>
+        <div class="card-body">
+            <ul class="list-unstyled" id="arbolPermisos">
+                @foreach (var menu in Model.Where(p => p.Padre_id == null))
+                {
+                    <li class="mb-3">
+                        <div class="d-flex align-items-center p-2 bg-light rounded">
+                            <span class="fw-bold">@menu.NombreMenu</span>
+                            <span class="badge bg-secondary ms-2">@menu.Modulo</span>
+                            @if (!string.IsNullOrEmpty(menu.Descripcion))
+                            {
+                                <span class="text-muted ms-3 small">@menu.Descripcion</span>
+                            }
+                        </div>
+
+                        @if (menu.Hijos.Any())
+                        {
+                            <ul class="list-unstyled ms-4 mt-2">
+                                @foreach (var hijo in menu.Hijos)
+                                {
+                                    <li class="mb-2">
+                                        <div class="d-flex align-items-center p-2 border-start border-3 border-primary ps-3">
+                                            <i class="fas fa-subscript me-2 text-info"></i>
+                                            <span>@hijo.NombreMenu</span>
+                                            <span class="badge @(hijo.Tipo == "MENU" ? "bg-success" : "bg-info") ms-2">
+                                                @hijo.Tipo
+                                            </span>
+                                            @if (!string.IsNullOrEmpty(hijo.Descripcion))
+                                            {
+                                                <span class="text-muted ms-3 small">@hijo.Descripcion</span>
+                                            }
+                                        </div>
+                                    </li>
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            </ul>
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script>
+        $(document).ready(function() {
+            // Manejar selección de rol
+            $('#rolSelector').change(function() {
+                var rolId = $(this).val();
+                if (rolId) {
+                    $('#btnAsignarPermisos').prop('disabled', false);
+                    $('#btnVerPermisos').prop('disabled', false);
+                } else {
+                    $('#btnAsignarPermisos').prop('disabled', true);
+                    $('#btnVerPermisos').prop('disabled', true);
+                }
+            });
+
+            // Botón Asignar Permisos
+            $('#btnAsignarPermisos').click(function() {
+                var rolId = $('#rolSelector').val();
+                if (rolId) {
+                    window.location.href = '@Url.Action("Asignar", "Permisos")/' + rolId;
+                }
+            });
+
+            // Botón Ver Permisos Asignados
+            $('#btnVerPermisos').click(function() {
+                var rolId = $('#rolSelector').val();
+                if (rolId) {
+                    window.location.href = '@Url.Action("VerAsignados", "Permisos")/' + rolId;
+                }
+            });
+        });
+    </script>
+}

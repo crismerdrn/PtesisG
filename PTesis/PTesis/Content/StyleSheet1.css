@@ -1,0 +1,133 @@
+﻿/* ======== ESTILOS GENERALES ======== */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f8f9fa;
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+/* ======== TOP NAV ======== */
+.navbar-brand-container {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.navbar-dark .navbar-brand {
+    color: #fff;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+    .navbar-dark .navbar-brand:hover {
+        color: #ffc107;
+    }
+
+/* ======== LAYOUT PRINCIPAL ======== */
+#layoutSidenav {
+    display: flex;
+    min-height: calc(100vh - 56px); /* Resta la altura del navbar */
+}
+
+/* ======== SIDEBAR ======== */
+#layoutSidenav_nav {
+    width: 250px;
+    min-width: 250px;
+    transition: all 0.3s ease;
+    flex-shrink: 0;
+    height: calc(100vh - 56px);
+    position: sticky;
+    top: 56px;
+}
+
+.sb-sidenav {
+    background-color: #343a40;
+    color: #fff;
+    height: 100%;
+    padding-top: 1rem;
+}
+
+    .sb-sidenav .nav-link {
+        color: rgba(255, 255, 255, 0.8);
+        transition: color 0.2s ease, background-color 0.2s ease;
+    }
+
+        .sb-sidenav .nav-link:hover {
+            color: #fff;
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .sb-sidenav .nav-link.active {
+            background-color: #495057;
+            color: #fff;
+            font-weight: 600;
+        }
+
+/* ======== COLLAPSE MENU ICON ======== */
+.sb-sidenav-collapse-arrow {
+    float: right;
+    margin-right: 8px;
+}
+
+/* ======== CONTENIDO PRINCIPAL ======== */
+#layoutSidenav_content {
+    flex-grow: 1;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+    min-width: 0;
+    width: 100%;
+}
+
+/* ======== TOGGLE (MENÚ COLAPSADO) ======== */
+body.sb-sidenav-toggled #layoutSidenav_nav {
+    margin-left: -250px;
+}
+
+body.sb-sidenav-toggled #layoutSidenav_content {
+    margin-left: 0;
+    width: 100%;
+}
+
+/* ======== RESPONSIVE ======== */
+@media (max-width: 768px) {
+    #layoutSidenav_nav {
+        position: fixed;
+        z-index: 1035;
+    }
+
+    body.sb-sidenav-toggled #layoutSidenav_nav {
+        margin-left: -250px;
+    }
+}
+
+/* ======== FOOTER ======== */
+footer {
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+/* ======== SCROLL ======== */
+.sb-sidenav .nav {
+    overflow-y: auto;
+    max-height: calc(100vh - 120px);
+}
+
+/* ======== ICONOS ======== */
+.sb-nav-link-icon {
+    width: 20px;
+    display: inline-block;
+    text-align: center;
+    margin-right: 8px;
+}
+
+/* Quitar flechas únicamente del campo Cantidad */
+.cantidad::-webkit-inner-spin-button,
+.cantidad::-webkit-outer-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.cantidad {
+    -moz-appearance: textfield;
+}

@@ -1,0 +1,219 @@
+﻿@model CapaModelo.CMReporteStockViewModel
+@{
+    ViewBag.Title = "Reporte de Inventario y Kardex";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<div class="container-fluid px-4 py-3">
+    <!-- ENCABEZADO IMPRESIÓN -->
+    <div class="print-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="m-0 fw-bold text-success">EL ESCONDITE DEL LORO</h5>
+                <p class="m-0 small text-muted">Estado de Almacén y Control de Stock</p>
+            </div>
+            <div class="text-end small">
+                <div><b>Generado:</b> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENCABEZADO PANTALLA -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <div class="d-flex align-items-center gap-2">
+            <h3 class="text-success m-0 fw-bold"><i class="fa fa-boxes me-2"></i>Reporte de Inventario y Kardex</h3>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm" onclick="exportarExcelStock();">
+                <i class="fa fa-file-excel me-1"></i> Excel
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="descargarPDFStock();">
+                <i class="fa fa-file-pdf me-1"></i> Imprimir Reporte
+            </button>
+        </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="row g-3 mb-4 kpi-print-row">
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-primary border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Total Artículos</span>
+                <h4 class="text-primary fw-bold m-0">@Model.TotalItems</h4>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-success border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Stock Óptimo</span>
+                <h4 class="text-success fw-bold m-0">@Model.TotalOptimos</h4>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-warning border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Stock Bajo</span>
+                <h4 class="text-warning fw-bold m-0">@Model.TotalBajos</h4>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-danger border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Agotados</span>
+                <h4 class="text-danger fw-bold m-0">@Model.TotalAgotados</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- PESTAÑAS: EXISTENCIAS VS KARDEX -->
+    <ul class="nav nav-pills mb-3 no-print" id="stockTabs" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active fw-bold" id="inventario-tab" data-bs-toggle="tab" data-bs-target="#tabInventario" type="button">
+                <i class="fa fa-warehouse me-1"></i> Existencias Físicas Actuales
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link fw-bold" id="kardex-tab" data-bs-toggle="tab" data-bs-target="#tabKardex" type="button">
+                <i class="fa fa-history me-1"></i> Historial Kardex de Auditoría
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="stockTabsContent">
+        <!-- TAB 1: INVENTARIO FÍSICO ACTUAL -->
+        <div class="tab-pane fade show active" id="tabInventario" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tablaStock">
+                            <thead>
+                                <tr>
+                                    <th style="width: 12%;">Tipo</th>
+                                    <th>Nombre del Artículo</th>
+                                    <th style="width: 15%;">Unidad Base</th>
+                                    <th class="text-end" style="width: 15%;">Stock Actual</th>
+                                    <th class="text-end" style="width: 15%;">Stock Mínimo</th>
+                                    <th class="text-center col-estado" style="width: 15%;">Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.Inventario)
+                                {
+                                    <tr>
+                                        <td>
+                                            <span class="badge @(item.TipoItem == "INSUMO" ? "bg-info text-dark" : "bg-primary")">
+                                                @item.TipoItem
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold">@item.NombreItem</td>
+                                        <td>@item.Medida (@item.Abreviatura)</td>
+                                        <td class="text-end fw-bold fs-6 @(item.StockActual <= item.StockMinimo ? "text-danger" : "text-success")">
+                                            @item.StockActual.ToString("N2") @item.Abreviatura
+                                        </td>
+                                        <td class="text-end text-muted">@item.StockMinimo.ToString("N2") @item.Abreviatura</td>
+                                        <td class="text-center col-estado">
+                                            @if (item.EstadoStock == "OPTIMO")
+                                            {
+                                                <span class="badge bg-success bg-opacity-75">ÓPTIMO</span>
+                                            }
+                                            else if (item.EstadoStock == "STOCK BAJO")
+                                            {
+                                                <span class="badge bg-warning text-dark">BAJO</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger">AGOTADO</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: AUDITORÍA KARDEX -->
+        <div class="tab-pane fade" id="tabKardex" role="tabpanel">
+            <div class="card shadow-sm border-0">
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" id="tablaKardex">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width: 16%;">Fecha y Hora</th>
+                                    <th style="width: 12%;">Movimiento</th>
+                                    <th>Ítem</th>
+                                    <th class="text-end" style="width: 10%;">Cant.</th>
+                                    <th class="text-end" style="width: 12%;">Anterior</th>
+                                    <th class="text-end" style="width: 12%;">Nuevo</th>
+                                    <th>Observaciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var m in Model.Movimientos)
+                                {
+                                    <tr>
+                                        <td>@m.FechaMovimiento.ToString("dd/MM/yyyy HH:mm")</td>
+                                        <td>
+                                            <span class="badge @(m.TipoMovimiento == "VENTA" ? "bg-danger" : (m.TipoMovimiento == "COMPRA" ? "bg-success" : "bg-secondary"))">
+                                                @m.TipoMovimiento
+                                            </span>
+                                        </td>
+                                        <td class="fw-bold">@m.NombreItem</td>
+                                        <td class="text-end fw-bold @(m.Cantidad < 0 ? "text-danger" : "text-success")">
+                                            @m.Cantidad.ToString("N2")
+                                        </td>
+                                        <td class="text-end text-muted">@m.StockAnterior.ToString("N2")</td>
+                                        <td class="text-end fw-bold">@m.StockNuevo.ToString("N2")</td>
+                                        <td class="small text-muted">@m.Observaciones</td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="@Url.Content("~/Content/Impresion.css")" rel="stylesheet" />
+}
+
+@section JavaScript {
+    <script>
+        function exportarExcelStock() {
+            var activeTab = document.querySelector('#stockTabs .active').getAttribute('id');
+            var tableId = activeTab === 'inventario-tab' ? 'tablaStock' : 'tablaKardex';
+            var tabla = document.getElementById(tableId);
+            if (!tabla) return;
+
+            var wb = XLSX.utils.table_to_book(tabla, { sheet: "Inventario", raw: false });
+            XLSX.writeFile(wb, "Reporte_Stock_" + (activeTab === 'inventario-tab' ? "Existencias" : "Kardex") + ".xlsx");
+        }
+
+        function descargarPDFStock() {
+            var elemento = document.querySelector('.container-fluid');
+            var ocultar = document.querySelectorAll('.no-print');
+            ocultar.forEach(el => el.style.setProperty('display', 'none', 'important'));
+
+            var header = document.querySelector('.print-header');
+            if (header) header.style.setProperty('display', 'block', 'important');
+
+            var opciones = {
+                margin: [8, 8, 8, 8],
+                filename: "Reporte_Stock_Inventario.pdf",
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'mm', format: 'letter', orientation: 'portrait' }
+            };
+
+            html2pdf().set(opciones).from(elemento).save().then(function () {
+                ocultar.forEach(el => el.style.removeProperty('display'));
+                if (header) header.style.removeProperty('display');
+            });
+        }
+    </script>
+}

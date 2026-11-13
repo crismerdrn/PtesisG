@@ -1,0 +1,42 @@
+﻿<style >
+/* Estilos para acomodar el espacio de la tabla */
+table.table {
+    width: 80%; /* Le da un ancho fijo para un mejor control, puedes ajustarlo (e.g., 100% or auto) */
+    max-width: 800px; /* Limita el ancho máximo para evitar que se extienda demasiado en pantallas grandes */
+    margin: 20px auto; /* Centra la tabla y añade un margen superior */
+    border-collapse: collapse; /* Asegura un mejor renderizado de los bordes */
+}
+
+table.table th {
+    text-align: center;
+    vertical-align: middle;
+}
+
+table.table td {
+    vertical-align: middle; /* Centra verticalmente el contenido de las celdas */
+    padding: 8px 12px; /* Espaciado interno estándar */
+}
+
+    /* Columna de Nombre del Menú: Permite que el texto fluya si es necesario */
+    table.table th:first-child,
+    table.table td:first-child {
+        text-align: left; /* Alinea el texto a la izquierda para mejor lectura */
+        width: auto; /* Permite que tome el espacio restante */
+    }
+
+    /* Columna de Acciones: Clave para ahorrar espacio */
+    table.table th:last-child,
+    table.table td:last-child {
+        width: 1%; /* ¡Esto hace que la columna sea lo más angosta posible! */
+        white-space: nowrap; /* Evita que los botones se rompan en dos líneas */
+        text-align: center; /* Centra los botones */
+        padding-left: 5px; /* Ajusta el padding para acercar los botones */
+        padding-right: 5px;
+    }
+
+        /* Estilos para los botones dentro de la columna de acciones */
+        table.table td:last-child .btn-sm {
+            margin: 2px 2px; /* Un pequeño margen entre los botones para separarlos */
+        }
+
+</style >

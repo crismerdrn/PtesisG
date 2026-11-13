@@ -1,0 +1,210 @@
+﻿@model List<CapaModelo.CMVenta>
+
+@{
+    ViewBag.Title = "Listado de Ventas";
+}
+
+<div class="container-fluid px-4">
+    @if (TempData["SuccessMessage"] != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-check-circle me-2"></i>@TempData["SuccessMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    @if (TempData["ErrorMessage"] != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show mt-3" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i>@TempData["ErrorMessage"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    }
+
+    <div class="d-flex justify-content-between align-items-center mt-4">
+        <h2 class="fw-bold"><i class="fas fa-shopping-bag me-2 text-success"></i>Listado de Ventas</h2>
+        <div>
+            @Html.ActionLink("Stock", "StockDisponible", null, new { @class = "btn btn-outline-info me-2" })
+            @Html.ActionLink("Reporte de Ventas", "Index", "ReportVentas", null, new { @class = "btn btn-outline-secondary" })
+        </div>
+    </div>
+
+    <div class="mt-3">
+        @if (ViewBag.PuedeCrear != null && (bool)ViewBag.PuedeCrear)
+        {
+            @Html.ActionLink("Nueva Venta", "Create", null, new { @class = "btn btn-success shadow-sm" })
+        }
+    </div>
+
+    <!-- Filtros Avanzados -->
+    <div class="card shadow-sm border-0 mb-4 mt-3">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "Venta")" class="row g-3 align-items-end">
+                <div class="col-md-3">
+                    <label class="form-label small fw-bold">N° Venta / Cliente</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control" placeholder="Buscar..." />
+                    </div>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Estado</label>
+                    <select name="estado" class="form-select">
+                        <option value="">Todos los estados</option>
+                        <option value="PENDIENTE" @(ViewBag.Estado == "PENDIENTE" ? "selected" : "")>PENDIENTE</option>
+                        <option value="COMPLETADA" @(ViewBag.Estado == "COMPLETADA" ? "selected" : "")>COMPLETADA</option>
+                        <option value="ANULADA" @(ViewBag.Estado == "ANULADA" ? "selected" : "")>ANULADA</option>
+                    </select>
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Tipo Venta</label>
+                    @Html.DropDownList("tipoVenta", ViewBag.ListaTiposVenta as List<SelectListItem>,
+                        new { @class = "form-select" })
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Desde</label>
+                    <input type="date" name="fechaDesde" value="@ViewBag.FechaDesde" class="form-control" />
+                </div>
+
+                <div class="col-md-2">
+                    <label class="form-label small fw-bold">Hasta</label>
+                    <input type="date" name="fechaHasta" value="@ViewBag.FechaHasta" class="form-control" />
+                </div>
+
+                <div class="col-md-1">
+                    <label class="form-label small fw-bold invisible">.</label>
+                    <button type="submit" class="btn btn-success w-100">
+                        <i class="fas fa-filter me-1"></i>
+                    </button>
+                </div>
+
+                <div class="col-md-12 mt-3 d-flex gap-2 justify-content-end">
+                    <a href="@Url.Action("Index", "Venta")" class="btn btn-secondary">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th class="text-center">N° Venta</th>
+                            <th>Cliente</th>
+                            <th class="text-center">Fecha</th>
+                            <th class="text-end">Total</th>
+                            <th class="text-center">Tipo</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Vendedor</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var venta in Model)
+                            {
+                                <tr>
+                                    <td class="text-center fw-bold">
+                                        @venta.NumeroVenta
+                                    </td>
+
+                                    <td>
+                                        @if (venta.CLIENTE_id_cliente.HasValue)
+                                        {
+                                            <div class="fw-semibold">@venta.NombreCliente</div>
+                                            <small class="text-muted">@venta.TelefonoCliente</small>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted fst-italic">Cliente no registrado</span>
+                                        }
+                                    </td>
+
+                                    <td class="text-center">
+                                        @venta.Fecha_venta.ToString("dd/MM/yyyy")
+                                        <br />
+                                        <small class="text-muted">@venta.hora_venta.ToString(@"hh\:mm")</small>
+                                    </td>
+
+                                    <td class="text-end fw-bold">
+                                        Bs. @venta.Total_venta.ToString("0.00")
+                                    </td>
+
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark">@venta.Tipo_venta</span>
+                                    </td>
+
+                                    <td class="text-center">
+                                        @if (venta.Estado == "COMPLETADA")
+                                        {
+                                            <span class="badge bg-success">COMPLETADA</span>
+                                        }
+                                        else if (venta.Estado == "PENDIENTE")
+                                        {
+                                            <span class="badge bg-warning text-dark">PENDIENTE</span>
+                                        }
+                                        else if (venta.Estado == "ANULADA")
+                                        {
+                                            <span class="badge bg-danger">ANULADA</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-info">@venta.Estado</span>
+                                        }
+                                    </td>
+
+                                    <td class="text-center">
+                                        <small>@venta.NombreVendedor</small>
+                                    </td>
+
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            @Html.ActionLink("Ver", "Details", new { id = venta.id_venta },
+                                                new { @class = "btn btn-info btn-sm", title = "Ver detalles" })
+
+                                            @if (ViewBag.PuedeAnular != null && (bool)ViewBag.PuedeAnular && venta.Estado == "COMPLETADA")
+                                            {
+                                                @Html.ActionLink("Anular", "Anular", new { id = venta.id_venta },
+                                                    new { @class = "btn btn-danger btn-sm ms-1", title = "Anular venta" })
+                                            }
+
+                                            <a href="@Url.Action("ImprimirComprobante", "Venta", new { id = venta.id_venta })"
+                                               class="btn btn-outline-primary btn-sm ms-1" target="_blank"
+                                               title="Imprimir comprobante">
+                                                <i class="fas fa-print"></i>
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="text-center py-4">
+                                    <i class="fas fa-info-circle me-2 text-muted"></i>
+                                    @if (!string.IsNullOrEmpty(ViewBag.Buscar) || !string.IsNullOrEmpty(ViewBag.Estado))
+                                    {
+                                        <span>No se encontraron ventas con los filtros aplicados.</span>
+                                    }
+                                    else
+                                    {
+                                        <span>No hay ventas registradas.</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

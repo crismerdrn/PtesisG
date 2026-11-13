@@ -1,0 +1,128 @@
+﻿@model CapaModelo.Usuario
+@{
+    ViewBag.Title = "Editar Usuario";
+}
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Usuario</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_usuario)
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.nombre, new { @class = "form-control", placeholder = "Nombre" })
+                            @Html.LabelFor(m => m.nombre)
+                            @Html.ValidationMessageFor(m => m.nombre, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.apellido, new { @class = "form-control", placeholder = "Apellido" })
+                            @Html.LabelFor(m => m.apellido)
+                            @Html.ValidationMessageFor(m => m.apellido, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.correo, new { @class = "form-control", placeholder = "Correo electrónico" })
+                            @Html.LabelFor(m => m.correo)
+                            @Html.ValidationMessageFor(m => m.correo, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <!-- Campo Teléfono -->
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.telefono, new
+                            {
+                                @class = "form-control",
+                                placeholder = "Teléfono",
+                                type = "tel",
+                                maxlength = "20",
+                                pattern = "[0-9]{6,20}",
+                                title = "Ingrese solo números (6-20 dígitos)"
+                            })
+                            @Html.LabelFor(m => m.telefono)
+                            <small class="text-muted">Solo números, entre 6 y 20 dígitos</small>
+                            @Html.ValidationMessageFor(m => m.telefono, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.direccion, new { @class = "form-control", placeholder = "Dirección" })
+                            @Html.LabelFor(m => m.direccion)
+                            @Html.ValidationMessageFor(m => m.direccion, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.usuario, new { @class = "form-control", placeholder = "Usuario" })
+                            @Html.LabelFor(m => m.usuario)
+                            @Html.ValidationMessageFor(m => m.usuario, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.PasswordFor(m => m.password, new
+                            {
+                                @class = "form-control",
+                                placeholder = "Dejar vacío para no cambiar",
+                                minlength = "6"
+                            })
+                            @Html.LabelFor(m => m.password)
+                            <small class="text-muted">Dejar vacío para mantener la actual</small>
+                            @Html.ValidationMessageFor(m => m.password, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(
+                                m => m.ROL_id_rol,
+                                ViewBag.ListaRoles as SelectList,
+                                "-- Seleccionar Rol --",
+                                new { @class = "form-select", id = "id_rol" }
+                            )
+                            <label for="id_rol">Rol</label>
+                            @Html.ValidationMessageFor(m => m.ROL_id_rol, "", new { @class = "text-danger" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-check pt-4">
+                            @Html.CheckBoxFor(m => m.estado, new { @class = "form-check-input" })
+                            @Html.LabelFor(m => m.estado, "Usuario Activo", new { @class = "form-check-label" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-end">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    @Scripts.Render("~/bundles/jqueryval")
+    <script src="~/Scripts/ValidacionesUsuario.js"></script>
+}

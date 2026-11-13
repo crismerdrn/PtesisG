@@ -1,0 +1,85 @@
+﻿@model CapaModelo.CMProducto
+
+<div class="container-fluid px-4">
+    <div class="card shadow-sm border-0 rounded-4 mt-4">
+        <div class="card-header bg-warning text-dark rounded-top-4">
+            <h4 class="mb-0"><i class="fas fa-edit me-2"></i>Editar Producto</h4>
+        </div>
+
+        <div class="card-body">
+            @using (Html.BeginForm())
+            {
+                @Html.AntiForgeryToken()
+                @Html.HiddenFor(m => m.id_producto)
+                @Html.HiddenFor(m => m.FechaRegistro)
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.TextBoxFor(m => m.Nombre, new { @class = "form-control", placeholder = "Nombre" })
+                            @Html.LabelFor(m => m.Nombre)
+                            @Html.ValidationMessageFor(m => m.Nombre, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            <input type="text"
+                                   class="form-control"
+                                   id="precioVentaInput"
+                                   name="PrecioVenta"
+                                   value="@Model.PrecioVenta.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)"
+                                   placeholder="Precio Venta" />
+                            <label for="precioVentaInput">Precio Venta</label>
+                            @Html.ValidationMessageFor(m => m.PrecioVenta, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.MEDIDAS_id_medida, (SelectList)ViewBag.ListaMedidas, new { @class = "form-select" })
+                            @Html.LabelFor(m => m.MEDIDAS_id_medida, "Medida")
+                            @Html.ValidationMessageFor(m => m.MEDIDAS_id_medida, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="form-floating">
+                            @Html.DropDownListFor(m => m.TIPO_PRODUCTO_id_tipoProducto, (SelectList)ViewBag.ListaTiposProducto, new { @class = "form-select" })
+                            @Html.LabelFor(m => m.TIPO_PRODUCTO_id_tipoProducto, "Tipo Producto")
+                            @Html.ValidationMessageFor(m => m.TIPO_PRODUCTO_id_tipoProducto, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12">
+                        <div class="form-floating">
+                            @Html.TextAreaFor(m => m.Descripcion, new { @class = "form-control", placeholder = "Descripción", style = "height: 100px;" })
+                            @Html.LabelFor(m => m.Descripcion)
+                            @Html.ValidationMessageFor(m => m.Descripcion, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+
+                    <div class="col-md-12 mt-3">
+                        <div class="form-check">
+                            @Html.CheckBoxFor(m => m.Estado, new { @class = "form-check-input", id = "estadoCheck" })
+                            <label class="form-check-label" for="estadoCheck">
+                                Producto Activo
+                            </label>
+                            @Html.ValidationMessageFor(m => m.Estado, "", new { @class = "text-danger small" })
+                        </div>
+                    </div>
+                </div>
+
+                <hr class="my-4" />
+
+                <div class="d-flex justify-content-start">
+                    <button type="submit" class="btn btn-primary me-2">
+                        <i class="fas fa-save me-1"></i> Actualizar
+                    </button>
+                    @Html.ActionLink("Volver al Listado", "Index", null, new { @class = "btn btn-secondary" })
+                </div>
+            }
+        </div>
+    </div>
+</div>

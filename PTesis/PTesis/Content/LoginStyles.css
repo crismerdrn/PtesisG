@@ -1,0 +1,72 @@
+﻿/* LoginStyles.css - Integrado a la paleta del Sistema */
+
+body {
+    /* Mismo tono oscuro del sidebar y fondo del sistema */
+    background: radial-gradient(circle at center, #2b3038 0%, #1a1d20 100%);
+    min-height: 100vh;
+}
+
+.login-card {
+    border: none;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.45);
+    border-radius: 1.25rem;
+    background-color: #ffffff;
+}
+
+/* Encabezado y títulos */
+.card-body h4 {
+    margin-top: 0 !important;
+    margin-bottom: 1.5rem;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    color: #198754; /* Verde corporativo de tus módulos */
+}
+
+/* Logotipo */
+.logo-login {
+    height: 110px;
+    width: 110px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 3px solid #e9ecef;
+    padding: 3px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 1.25rem;
+}
+
+/* Campos de texto */
+.form-control {
+    border-radius: 0.5rem;
+    padding: 0.65rem 0.9rem;
+    border: 1px solid #ced4da;
+    background-color: #f8f9fa;
+    transition: all 0.2s ease-in-out;
+}
+
+    .form-control:focus {
+        background-color: #ffffff;
+        border-color: #198754;
+        box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.15);
+    }
+
+/* Botón adaptado al verde del sistema (sin azul que desentone) */
+.btn-primary {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    border-radius: 0.5rem;
+    padding: 0.7rem 1.2rem;
+    font-weight: 600;
+    transition: all 0.2s ease-in-out;
+}
+
+    .btn-primary:hover {
+        background-color: #157347 !important;
+        border-color: #146c43 !important;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(25, 135, 84, 0.25);
+    }
+
+    .btn-primary:active {
+        transform: translateY(0);
+    }

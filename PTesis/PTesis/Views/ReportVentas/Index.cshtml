@@ -1,0 +1,193 @@
+﻿@model CapaModelo.CMReporteVentaViewModel
+@{
+    ViewBag.Title = "Reporte de Ventas";
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+<div class="container-fluid px-4 py-3">
+
+    <!-- ENCABEZADO PARA IMPRESIÓN (Visible solo en papel / PDF) -->
+    <div class="print-header">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h5 class="m-0 fw-bold text-success">EL ESCONDITE DEL LORO</h5>
+                <p class="m-0 small text-muted">Reporte Detallado de Ventas</p>
+            </div>
+            <div class="text-end small">
+                <div><b>Período:</b> @(DateTime.Parse(ViewBag.FechaInicio).ToString("dd/MM/yyyy")) al @(DateTime.Parse(ViewBag.FechaFin).ToString("dd/MM/yyyy"))</div>
+                <div><b>Generado:</b> @DateTime.Now.ToString("dd/MM/yyyy HH:mm")</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ENCABEZADO PANTALLA -->
+    <div class="d-flex justify-content-between align-items-center mb-3 no-print">
+        <div class="d-flex align-items-center gap-2">
+            <h3 class="text-success m-0 fw-bold"><i class="fa fa-chart-line me-2"></i>Reporte de Ventas</h3>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-success btn-sm" onclick="exportarExcel();">
+                <i class="fa fa-file-excel me-1"></i> Excel
+            </button>
+            <button class="btn btn-outline-danger btn-sm" onclick="descargarPDF();">
+                <i class="fa fa-file-pdf me-1"></i> Imprimir Reporte
+            </button>
+        </div>
+    </div>
+
+    <!-- TARJETAS DE INDICADORES (KPIs) -->
+    <div class="row g-3 mb-4 kpi-print-row">
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-success border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Total Recaudado</span>
+                <h4 class="text-success fw-bold m-0">Bs. @Model.TotalRecaudado.ToString("N2")</h4>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-primary border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Cantidad de Ventas</span>
+                <h4 class="text-primary fw-bold m-0">@Model.CantidadVentas</h4>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-info border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Ticket Promedio</span>
+                <h4 class="text-info fw-bold m-0">Bs. @Model.TicketPromedio.ToString("N2")</h4>
+            </div>
+        </div>
+        <div class="col-md-3 col-6">
+            <div class="card card-kpi shadow-sm border-start border-warning border-4 p-3 kpi-print-box">
+                <span class="text-muted small">Productos Vendidos</span>
+                <h4 class="text-warning fw-bold m-0">@Model.TotalItemsVendidos.ToString("N0")</h4>
+            </div>
+        </div>
+    </div>
+
+    <!-- FILTROS (Ocultos al imprimir) -->
+    <div class="card shadow-sm mb-4 border-0 no-print" style="background-color: #fdfdfd; border: 1px solid #e9ecef !important;">
+        <div class="card-body p-3">
+            @using (Html.BeginForm("Index", "ReportVentas", FormMethod.Get, new { @class = "row g-2 align-items-end" }))
+            {
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label small fw-bold mb-1">Fecha Desde</label>
+                    <input type="date" name="fechaInicio" class="form-control form-control-sm" value="@ViewBag.FechaInicio" />
+                </div>
+                <div class="col-lg-2 col-md-3">
+                    <label class="form-label small fw-bold mb-1">Fecha Hasta</label>
+                    <input type="date" name="fechaFin" class="form-control form-control-sm" value="@ViewBag.FechaFin" />
+                </div>
+                <div class="col-lg-3 col-md-3">
+                    <label class="form-label small fw-bold mb-1">Canal de Venta</label>
+                    @Html.DropDownList("idTipoVenta", (SelectList)ViewBag.ListaCanales, "TODOS LOS CANALES", new { @class = "form-select form-select-sm" })
+                </div>
+                <div class="col-lg-3 col-md-3">
+                    <label class="form-label small fw-bold mb-1">Forma de Pago</label>
+                    @Html.DropDownList("idTipoPago", (SelectList)ViewBag.ListaTiposPago, "TODAS LAS FORMAS", new { @class = "form-select form-select-sm" })
+                </div>
+                <div class="col-lg-2 col-md-12 d-flex gap-2">
+                    <button type="submit" class="btn btn-success btn-sm flex-grow-1">
+                        <i class="fa fa-filter me-1"></i> Filtrar
+                    </button>
+                    <a href="@Url.Action("Index", "ReportVentas")" class="btn btn-outline-secondary btn-sm" title="Restablecer">
+                        Limpiar
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    <!-- TABLA DE RESULTADOS -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0" id="tablaVentas">
+                    <thead>
+                        <tr>
+                            <th style="width: 12%;">N° Venta</th>
+                            <th style="width: 16%;">Fecha y Hora</th>
+                            <th>Cliente</th>
+                            <th>Vendedor</th>
+                            <th style="width: 11%;">Canal</th>
+                            <th style="width: 11%;">Forma Pago</th>
+                            <th class="text-center" style="width: 9%;">Cant.</th>
+                            <th class="text-end" style="width: 14%;">Total</th>
+                            <th class="text-center col-estado" style="width: 10%;">Estado</th>
+                            <th class="text-center no-print col-accion" style="width: 50px;">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Ventas != null && Model.Ventas.Any())
+                        {
+                            foreach (var item in Model.Ventas)
+                            {
+                                <tr>
+                                    <td class="fw-bold text-dark">@item.NumeroVenta</td>
+                                    <td>
+                                        <div>@item.FechaVenta.ToString("dd/MM/yyyy")</div>
+                                        <small class="text-muted">@item.HoraVenta.ToString(@"hh\:mm")</small>
+                                    </td>
+                                    <td>@item.Cliente</td>
+                                    <td class="text-muted">@item.Vendedor</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border">@item.CanalVenta</span>
+                                    </td>
+                                    <td>@item.FormaPago</td>
+                                    <td class="text-center">@item.TotalItemsVendidos.ToString("N0")</td>
+                                    <td class="text-end fw-bold text-success">Bs. @item.TotalVenta.ToString("N2")</td>
+                                    <td class="text-center col-estado">
+                                        @if (item.Estado == "COMPLETADA")
+                                        {
+                                            <span class="badge bg-success bg-opacity-75">COMPLETADA</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger bg-opacity-75">@item.Estado</span>
+                                        }
+                                    </td>
+                                    <td class="text-center no-print col-accion">
+                                        <a href="@Url.Action("Details", "Venta", new { id = item.IdVenta })" class="btn btn-sm btn-outline-info p-1 px-2" title="Ver detalle">
+                                            <i class="fa fa-eye"></i>
+                                        </a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="10" class="text-center py-4 text-muted">
+                                    <i class="fa fa-inbox fa-2x mb-2 d-block text-secondary"></i>
+                                    No se encontraron ventas para los filtros seleccionados.
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                    @if (Model.Ventas != null && Model.Ventas.Any())
+                    {
+                        <tfoot class="table-light fw-bold">
+                            <tr>
+                                <td colspan="6" class="text-end">TOTALES GENERALES:</td>
+                                <td class="text-center">@Model.TotalItemsVendidos.ToString("N0")</td>
+                                <td class="text-end text-success">Bs. @Model.TotalRecaudado.ToString("N2")</td>
+                                <td class="col-estado"></td>
+                                <td class="no-print col-accion"></td>
+                            </tr>
+                        </tfoot>
+                    }
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Styles {
+    <link href="@Url.Content("~/Content/Impresion.css")" rel="stylesheet" />
+}
+
+@section JavaScript {
+    <script src="@Url.Content("~/Scripts/ReporteVenta.js")"></script>
+}

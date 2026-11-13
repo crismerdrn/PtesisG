@@ -1,0 +1,158 @@
+﻿@model List<CapaModelo.CMMedida>
+@{
+    var medidas = Model ?? new List<CapaModelo.CMMedida>();
+}
+
+<div class="container-fluid px-4">
+    <div class="mt-4">
+        <h2 class="fw-bold"><i class="fas fa-ruler me-2 text-primary"></i>Listado de Medidas</h2>
+    </div>
+
+    @if (ViewBag.PuedeCrear == null || ViewBag.PuedeCrear == true)
+    {
+        <div class="mb-3">
+            @Html.ActionLink("Agregar Medida", "Create", null, new { @class = "btn btn-primary shadow-sm", @id = "btnCrear" })
+        </div>
+    }
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "Medida")" class="row g-2 align-items-end" id="formBusqueda">
+
+                <div class="col-md-5 col-lg-4">
+                    <label class="form-label small fw-bold text-muted mb-1">Buscar por término</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control"
+                               placeholder="Descripción o abreviatura..." maxlength="50" id="txtBuscar" />
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-lg-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Desde</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" name="fechaInicio" value="@ViewBag.FechaInicio" class="form-control" id="txtFechaInicio" />
+                    </div>
+                </div>
+
+                <div class="col-md-3 col-lg-3">
+                    <label class="form-label small fw-bold text-muted mb-1">Hasta</label>
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-calendar-alt"></i></span>
+                        <input type="date" name="fechaFin" value="@ViewBag.FechaFin" class="form-control" id="txtFechaFin" />
+                    </div>
+                </div>
+
+                <div class="col-md-12 col-lg-2 d-flex gap-2">
+                    <button type="submit" class="btn btn-success flex-fill" id="btnBuscar">
+                        <i class="fas fa-filter me-1"></i> Filtrar
+                    </button>
+                    <a href="@Url.Action("Index", "Medida")" class="btn btn-secondary flex-fill" id="btnLimpiar">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+    <div class="table-responsive shadow-sm rounded-4">
+        <table class="table table-bordered table-hover align-middle mb-0" id="tablaMedidas">
+            <thead class="table-light">
+                <tr>
+                    <th>Descripción</th>
+                    <th>Abreviatura</th>
+                    <th class="text-center">Estado</th>
+                    <th class="text-center">Fecha Registro</th>
+                    <th class="text-center">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (medidas.Any())
+                {
+                    foreach (var medida in medidas)
+                    {
+                        <tr>
+                            <td>
+                                <strong>@Html.Raw(HttpUtility.HtmlEncode(medida.Descripcion))</strong>
+                            </td>
+                            <td>
+                                <span class="badge bg-light text-dark border">@Html.Raw(HttpUtility.HtmlEncode(medida.Abreviatura))</span>
+                            </td>
+                            <td class="text-center">
+                                @if (medida.Estado)
+                                {
+                                    <span class="badge bg-success">Activo</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-danger">Inactivo</span>
+                                }
+                            </td>
+                            <td class="text-center">
+                                @(medida.FechaRegistro != DateTime.MinValue ? medida.FechaRegistro.ToString("dd/MM/yyyy") : "-")
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group" role="group">
+                                    @if (ViewBag.PuedeEditar == null || ViewBag.PuedeEditar == true)
+                                    {
+                                        <a href="@Url.Action("Edit", new { id = medida.id_medida })"
+                                           class="btn btn-warning btn-sm"
+                                           title="Editar">
+                                            Editar
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEliminar == null || ViewBag.PuedeEliminar == true)
+                                    {
+                                        <a href="@Url.Action("Delete", new { id = medida.id_medida })"
+                                           class="btn btn-danger btn-sm ms-1"
+                                           title="Eliminar">
+                                            Eliminar
+                                        </a>
+                                    }
+
+                                    @if (ViewBag.PuedeEditar == false && ViewBag.PuedeEliminar == false)
+                                    {
+                                        <span class="text-muted small">Sin permisos</span>
+                                    }
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-2x mb-2"></i><br />
+                            @if (!string.IsNullOrEmpty(ViewBag.Buscar) || !string.IsNullOrEmpty(ViewBag.FechaInicio) || !string.IsNullOrEmpty(ViewBag.FechaFin))
+                            {
+                                <text>No se encontraron medidas que coincidan con los criterios de búsqueda.</text>
+                            }
+                            else
+                            {
+                                <text>No se encontraron medidas registradas.</text>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    function sanitizeInput(input) {
+        if (!input) return '';
+        return input.replace(/[<>&"'`]/g, '');
+    }
+
+    document.getElementById('btnBuscar')?.addEventListener('click', function () {
+        var inputBuscar = document.getElementById('txtBuscar');
+        if (inputBuscar) {
+            inputBuscar.value = sanitizeInput(inputBuscar.value.trim());
+        }
+    });
+</script>

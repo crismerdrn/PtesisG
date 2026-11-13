@@ -1,0 +1,221 @@
+﻿@model List<CapaModelo.CMProveedor>
+
+@{
+    ViewBag.Title = "Listado de Proveedores";
+}
+
+<div class="container-fluid px-4">
+
+    <!-- Título -->
+    <h2 class="fw-bold mt-4 mb-2">
+        <i class="fas fa-truck me-2 text-primary"></i>Listado de Proveedores
+    </h2>
+
+    <!-- Botón debajo del título -->
+    <div class="mb-4 d-flex align-items-center gap-2">
+        @Html.ActionLink("Agregar Proveedor", "Create", null, new { @class = "btn btn-primary shadow-sm" })
+    </div>
+
+    <!-- Tarjeta de búsqueda -->
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body">
+            <form method="get" action="@Url.Action("Index", "Proveedor")" class="row g-3 align-items-center">
+                <div class="col-md-8 col-lg-9">
+                    <div class="input-group">
+                        <span class="input-group-text bg-light"><i class="fas fa-search"></i></span>
+                        <input type="text" name="buscar" value="@ViewBag.Buscar" class="form-control"
+                               placeholder="Buscar por razón social, nombre, CI, NIT o teléfono..." />
+                    </div>
+                </div>
+                <div class="col-md-4 col-lg-3 d-flex gap-2 justify-content-end">
+                    <button type="submit" class="btn btn-success w-50">
+                        <i class="fas fa-search me-1"></i> Buscar
+                    </button>
+                    <a href="@Url.Action("Index", "Proveedor")" class="btn btn-secondary w-50">
+                        <i class="fas fa-undo me-1"></i> Limpiar
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-bordered table-hover align-middle mb-0" id="tablaProveedores">
+                    <thead class="table-light">
+                        <tr>
+                            <!-- ID ELIMINADO -->
+                            <th>Tipo</th>
+                            <th>Nombre/Razón Social</th>
+                            <th>Identificación</th>
+                            <th>Teléfono</th>
+                            <th>Email</th>
+                            <th>Estado</th>
+                            <th class="text-center">Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        @if (Model != null && Model.Any())
+                        {
+                            foreach (var proveedor in Model)
+                            {
+                                <tr data-id="@proveedor.id_proveedor">
+
+                                    <!-- ID eliminado -->
+
+                                    <td>
+                                        @if (proveedor.esEmpresa)
+                                        {
+                                            <span class="badge bg-info">Empresa</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-secondary">Persona</span>
+                                        }
+                                    </td>
+
+                                    <td>@proveedor.NombreCompleto</td>
+                                    <td>@proveedor.Identificacion</td>
+                                    <td>@proveedor.Telefono</td>
+
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(proveedor.Email))
+                                        {
+                                            <span>@proveedor.Email</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="text-muted">Sin email</span>
+                                        }
+                                    </td>
+
+                                    <td class="estado-columna">
+                                        @if (proveedor.Estado)
+                                        {
+                                            <span class="badge bg-success">Activo</span>
+                                        }
+                                        else
+                                        {
+                                            <span class="badge bg-danger">Inactivo</span>
+                                        }
+                                    </td>
+
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+
+                                            <!-- Botón DETALLES eliminado -->
+
+                                            @Html.ActionLink("Editar", "Edit", new { id = proveedor.id_proveedor },
+                                                new { @class = "btn btn-warning btn-sm" })
+
+                                            @Html.ActionLink("Eliminar", "Delete", new { id = proveedor.id_proveedor },
+                                                new { @class = "btn btn-danger btn-sm" })
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="7" class="text-center py-5">
+                                    <div class="text-muted">
+                                        <i class="fas fa-users fa-3x mb-3"></i>
+                                        <p class="mb-0">
+                                            @if (!string.IsNullOrEmpty(ViewBag.Buscar))
+                                            {
+                                                <strong>No se encontraron proveedores</strong><br />
+                                                <small>Intenta con otros términos de búsqueda</small>
+                                            }
+                                            else
+                                            {
+                                                <strong>No hay proveedores registrados</strong><br />
+                                                <small>¡Comienza agregando tu primer proveedor!</small>
+                                            }
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section JavaScript {
+    <script>
+    $(document).ready(function () {
+        // Delegación de eventos por si usas paginación o recargas parciales
+        $(document).on('click', '.cambiar-estado', function (e) {
+            e.preventDefault();
+
+            var btn = $(this);
+            var id = btn.data('id');
+
+            // Mensaje de confirmación
+            // Nota: Leemos el estado actual visual para preguntar
+            var esActivoVisualmente = btn.hasClass('btn-success');
+            var msg = esActivoVisualmente
+                ? "¿Está seguro de desactivar este proveedor?"
+                : "¿Está seguro de activar este proveedor?";
+
+            if (!confirm(msg)) return;
+
+            // Bloqueamos el botón para evitar doble click
+            btn.prop('disabled', true);
+
+            $.post('@Url.Action("CambiarEstado", "Proveedor")', { id: id })
+                .done(function (data) {
+
+                    if (data.success) {
+                        // TU CONTROLADOR devuelve: data.nuevoEstado (true/false)
+                        // Usamos ESE valor real de la base de datos
+                        var esActivo = data.nuevoEstado;
+
+                        // 1. Actualizamos el botón
+                        btn.data('estado', esActivo);
+
+                        if (esActivo) {
+                            // Caso: Se volvió ACTIVO
+                            btn.removeClass('btn-secondary').addClass('btn-success');
+                            btn.html('<i class="fas fa-toggle-on"></i>');
+                            btn.attr('title', 'Desactivar'); // Accesibilidad
+                        } else {
+                            // Caso: Se volvió INACTIVO
+                            btn.removeClass('btn-success').addClass('btn-secondary');
+                            btn.html('<i class="fas fa-toggle-off"></i>');
+                            btn.attr('title', 'Activar'); // Accesibilidad
+                        }
+
+                        // 2. Actualizamos el Badge (Etiqueta)
+                        // Buscamos la columna en la misma fila (tr)
+                        var badge = btn.closest('tr').find('.estado-columna');
+
+                        if (esActivo) {
+                            badge.html('<span class="badge bg-success">Activo</span>');
+                        } else {
+                            badge.html('<span class="badge bg-danger">Inactivo</span>');
+                        }
+
+                        toastr.success(data.message);
+                    } else {
+                        toastr.error(data.message);
+                    }
+                })
+                .fail(function () {
+                    toastr.error("Error de comunicación con el servidor.");
+                })
+                .always(function() {
+                    // Reactivamos el botón pase lo que pase
+                    btn.prop('disabled', false);
+                });
+        });
+    });
+    </script>
+}
