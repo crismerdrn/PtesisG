@@ -26,17 +26,20 @@ namespace PTesis.Controllers
             return View(modelo);
         }
 
-        private CMPolleria ObtenerPolleriaActiva()
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CambiarPolleria(int idPolleria, string returnUrl)
         {
-            try
-            {
-                var pollerias = cdPolleria.Listar();
-                return pollerias?.FirstOrDefault(p => p.Estado);
-            }
-            catch
-            {
-                return null;
-            }
+            if (EsPolleriaActiva(idPolleria))
+                SeleccionarPolleriaTrabajo(idPolleria);
+            else
+                TempData["Error"] = "La pollería seleccionada no existe o está inactiva.";
+
+            if (!string.IsNullOrEmpty(returnUrl) && Url.IsLocalUrl(returnUrl))
+                return Redirect(returnUrl);
+
+            return RedirectToAction("Index");
         }
+
     }
 }

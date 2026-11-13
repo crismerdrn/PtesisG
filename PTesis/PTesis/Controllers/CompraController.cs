@@ -726,19 +726,6 @@ namespace PTesis.Controllers
             }
         }
 
-        private CMPolleria ObtenerPolleriaActiva()
-        {
-            try
-            {
-                var pollerias = cdPolleria.Listar();
-                return pollerias?.FirstOrDefault(p => p.Estado);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Error obteniendo pollería activa: {ex.Message}");
-                return null;
-            }
-        }
 
         private List<CMDetalleCompra> ParsearDetalles(string detallesJson)
         {

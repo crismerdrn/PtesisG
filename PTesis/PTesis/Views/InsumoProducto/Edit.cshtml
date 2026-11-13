@@ -132,27 +132,43 @@
 
 @section JavaScript {
     <script>
+        // Misma regla que sp_Venta_RegistrarConStock: en insumos en kg o lts, 1 o más se toma como gr o ml.
+        function describirConsumo(textoInsumo, cantidad) {
+            if (isNaN(cantidad) || cantidad <= 0) return '';
+            var partes = (textoInsumo || '').split(' - ');
+            var abrev = partes.length > 1 ? partes[partes.length - 1].trim() : '';
+            var a = abrev.toLowerCase();
+            if ((a === 'kg' || a === 'lts') && cantidad >= 1) {
+                return cantidad + ' ' + (a === 'kg' ? 'gr' : 'ml') + ' = ' + parseFloat((cantidad / 1000).toFixed(4)) + ' ' + abrev;
+            }
+            return cantidad + ' ' + abrev;
+        }
+
+        function mostrarAyudaConsumo(textoInsumo, cantidad, helper) {
+            var a = ((textoInsumo || '').split(' - ').pop() || '').trim().toLowerCase();
+            var html = '';
+            if (a === 'kg' || a === 'lts') {
+                var menor = a === 'kg' ? 'gramos' : 'mililitros';
+                html = '<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>' + menor + '</strong> (ej: <em>120</em>) o en ' + a +
+                    ' si es menos de 1 (ej: <em>0.12</em>). Un valor de 1 o más se toma como ' + menor + ' (1 ' + a + ' = 1000).';
+            }
+            var consumo = describirConsumo(textoInsumo, cantidad);
+            if (consumo) {
+                html += (html ? '<br />' : '') + '<i class="fas fa-calculator text-success"></i> Por cada unidad vendida se descuenta: <strong>' + consumo + '</strong>';
+            }
+            helper.html(html);
+        }
+
         $(document).ready(function () {
             function actualizarMensajeAyuda() {
-                var textoSeleccionado = $('#editInsumo option:selected').text().toLowerCase();
-                var helper = $('#ayudaMedidaEdit');
-
-                if (textoSeleccionado.indexOf('arroz') !== -1 || textoSeleccionado.indexOf('papa') !== -1) {
-                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos (gr)</strong> (ej: <em>120</em>) o fracción.');
-                } else if (textoSeleccionado.indexOf('aceite') !== -1) {
-                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese consumo en <strong>Mililitros (mls)</strong> (ej: <em>40</em>).');
-                } else if (textoSeleccionado.indexOf('pollo') !== -1) {
-                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos</strong> (ej: <em>300</em>) o en <strong>Kilos</strong> (ej: <em>0.3</em>).');
-                } else {
-                    helper.empty();
-                }
+                mostrarAyudaConsumo($('#editInsumo option:selected').text(), parseFloat($('#editCantidad').val()), $('#ayudaMedidaEdit'));
             }
 
             // Ejecutar al cargar la vista con el insumo actual
             actualizarMensajeAyuda();
 
             // Ejecutar si el usuario cambia de insumo en el dropdown
-            $('#editInsumo').on('change', function () {
+            $('#editInsumo, #editCantidad').on('change input', function () {
                 actualizarMensajeAyuda();
             });
         });

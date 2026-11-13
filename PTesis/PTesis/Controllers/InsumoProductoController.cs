@@ -290,8 +290,7 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index");
             }
 
-            if (cdPolleria == null) cdPolleria = new CDPolleria();
-            var polleriaActiva = cdPolleria.Listar()?.FirstOrDefault(p => p.Estado);
+            var polleriaActiva = ObtenerPolleriaActiva();
             int idPolleria = polleriaActiva != null ? polleriaActiva.id_polleria : 5;
 
             var resultado = cdInsumoProducto.CalcularCostoProduccion(idProducto, idPolleria);
@@ -830,6 +829,20 @@ namespace PTesis.Controllers
                 if (listaInsumos == null || !listaInsumos.Any())
                 {
                     TempData["Error"] = "No se recibieron insumos válidos.";
+                    return RedirectToAction("Create", new { idProducto = idProducto });
+                }
+
+                string errorReceta = null;
+                if (cdProducto.ObtenerProductoPorId(idProducto) == null)
+                    errorReceta = "El producto seleccionado no existe.";
+                else if (listaInsumos.Any(i => i.INSUMO_id_insumo <= 0 || i.cantidad_requerida <= 0))
+                    errorReceta = "Cada insumo de la receta debe tener una cantidad mayor a cero.";
+                else if (listaInsumos.GroupBy(i => i.INSUMO_id_insumo).Any(g => g.Count() > 1))
+                    errorReceta = "Hay insumos repetidos en la receta.";
+
+                if (errorReceta != null)
+                {
+                    TempData["Error"] = errorReceta;
                     return RedirectToAction("Create", new { idProducto = idProducto });
                 }
 
