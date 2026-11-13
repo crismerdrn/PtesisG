@@ -217,7 +217,7 @@
 
                     // Llenar campos ocultos
                     $('#NombreProducto').val(producto.nombreProducto);
-                    $('#NombrePolleria').val('@(ViewBag.PolleriaActiva?.Nombre)');
+                    $('#NombrePolleria').val($('#PolleriaSelect option:selected').text());
 
                     // Establecer stock actual como valor inicial
                     $('#NuevoStock').val(producto.stockActual);
