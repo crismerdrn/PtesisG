@@ -456,7 +456,9 @@ namespace CapaDatos
 
                     ELSE 'NORMAL'
 
-                END AS EstadoStock
+                END AS EstadoStock,
+
+                s.Fecha_ultimo_movimiento AS FechaUltimoMovimiento
 
             FROM PRODUCTO p
 
