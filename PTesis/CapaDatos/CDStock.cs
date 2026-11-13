@@ -408,8 +408,8 @@ namespace CapaDatos
                                 stock_anterior = Convert.ToDecimal(dr["stock_anterior"]),
                                 stock_nuevo = Convert.ToDecimal(dr["stock_nuevo"]),
                                 observaciones = dr["observaciones"] != DBNull.Value ? dr["observaciones"].ToString() : "",
-                                nombre_item = dr["item_nombre"] != DBNull.Value
-                ? dr["item_nombre"].ToString()
+                                nombre_item = dr["producto_nombre"] != DBNull.Value
+                ? dr["producto_nombre"].ToString()
                 : "Desconocido",
 
                                 nombre_polleria = dr["polleria_nombre"] != DBNull.Value
