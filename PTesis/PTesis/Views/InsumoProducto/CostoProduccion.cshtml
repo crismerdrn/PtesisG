@@ -99,8 +99,7 @@
                             <tr>
                                 <td class="fw-semibold">@item.NombreInsumo</td>
                                 <td class="text-center">
-                                    <span class="fw-bold">@item.cantidad_requerida.ToString("G29")</span>
-                                    <span class="badge bg-light text-dark border ms-1">@item.AbreviaturaMedida</span>
+                                    <span class="fw-bold">@CapaModelo.CMInsumoProducto.FormatearConsumo(item.cantidad_requerida, item.AbreviaturaMedida, item.MedidaInsumo)</span>
                                 </td>
                                 <td class="text-end">Bs. @item.UltimoPrecioCompra.ToString("N2")</td>
                                 <td class="text-end">Bs. @item.PrecioPromedio3Meses.ToString("N2")</td>

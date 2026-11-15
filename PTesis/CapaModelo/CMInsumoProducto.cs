@@ -52,17 +52,19 @@ namespace CapaModelo
         /// </summary>
         public string ConsumoPorUnidad
         {
-            get
+            get { return FormatearConsumo(cantidad_requerida, AbreviaturaMedida, MedidaInsumo); }
+        }
+
+        public static string FormatearConsumo(decimal cantidad, string abreviatura, string medida)
+        {
+            string abrev = (abreviatura ?? "").Trim();
+            string abrevMin = abrev.ToLowerInvariant();
+            if ((abrevMin == "kg" || abrevMin == "lts") && cantidad >= 1)
             {
-                string abrev = (AbreviaturaMedida ?? "").Trim();
-                string abrevMin = abrev.ToLowerInvariant();
-                if ((abrevMin == "kg" || abrevMin == "lts") && cantidad_requerida >= 1)
-                {
-                    string menor = abrevMin == "kg" ? "gr" : "ml";
-                    return $"{cantidad_requerida:0.####} {menor} = {cantidad_requerida / 1000m:0.####} {abrev}";
-                }
-                return $"{cantidad_requerida:0.####} {(string.IsNullOrEmpty(abrev) ? MedidaInsumo : abrev)}";
+                string menor = abrevMin == "kg" ? "gr" : "ml";
+                return $"{cantidad:0.####} {menor} = {cantidad / 1000m:0.####} {abrev}";
             }
+            return $"{cantidad:0.####} {(string.IsNullOrEmpty(abrev) ? medida : abrev)}";
         }
 
         // Constructor para inicializar propiedades

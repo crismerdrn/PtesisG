@@ -897,6 +897,12 @@ namespace PTesis.Controllers
         // --- MÉTODO PARA PRUEBAS ---
         public ActionResult TestRelacion(int id = 1)
         {
+            if (!TienePermiso("InsumosProductos"))
+            {
+                TempData["Error"] = "No tiene permisos para acceder al módulo Insumos-Productos.";
+                return RedirectToAction("Index", "Home");
+            }
+
             System.Diagnostics.Debug.WriteLine($"=== TestRelacion ===");
 
             var resultado = cdInsumoProducto.ObtenerPorId(id);

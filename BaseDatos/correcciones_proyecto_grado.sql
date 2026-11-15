@@ -543,3 +543,231 @@ BEGIN
     END CATCH
 END;
 GO
+
+-- La tabla temporal guardaba cantidad_requerida como DECIMAL(10,2): una receta de 0.125 kg se mostraba como 0.13.
+CREATE OR ALTER PROCEDURE [dbo].[sp_InsumoProducto_CalcularCostoProduccion]
+    @IdProducto INT,
+    @IdPolleria INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @PrecioVenta DECIMAL(10,2),
+            @NombreProducto NVARCHAR(200),
+            @CostoTotal DECIMAL(10,2) = 0,
+            @TotalInsumos INT = 0,
+            @UnidadesMaximasProducibles INT = NULL;
+
+    -- 1. Obtener producto
+    SELECT
+        @PrecioVenta = p.PrecioVenta,
+        @NombreProducto = p.Nombre
+    FROM PRODUCTO p
+    WHERE p.id_producto = @IdProducto
+        AND p.Estado = 1;
+
+    IF @NombreProducto IS NULL
+    BEGIN
+        SELECT TOP 0 * FROM (
+            SELECT
+                0 AS id_insumo_producto, '' AS NombreInsumo, 0.00 AS cantidad_requerida,
+                '' AS MedidaInsumo, '' AS AbreviaturaMedida, 0.00 AS UltimoPrecioCompra,
+                0.00 AS PrecioPromedio3Meses, 0.00 AS CostoInsumo, 0.00 AS StockActual, 0 AS UnidadesProducibles
+        ) AS EmptyResult;
+
+        SELECT
+            @IdProducto AS IdProducto, 'Producto no encontrado' AS NombreProducto,
+            0.00 AS PrecioVenta, 0.00 AS CostoTotalProduccion, 0.00 AS GananciaUnitaria,
+            0.00 AS PorcentajeMargen, 0 AS TotalInsumos, NULL AS UnidadesMaximasProducibles;
+        RETURN;
+    END
+
+    CREATE TABLE #DetallesCosto (
+        id_insumo_producto INT,
+        NombreInsumo NVARCHAR(200),
+        cantidad_requerida DECIMAL(10,4),
+        MedidaInsumo NVARCHAR(50),
+        AbreviaturaMedida NVARCHAR(20),
+        UltimoPrecioCompra DECIMAL(10,2),
+        PrecioPromedio3Meses DECIMAL(10,2),
+        CostoInsumo DECIMAL(10,2),
+        StockActual DECIMAL(10,2),
+        UnidadesProducibles INT
+    );
+
+    INSERT INTO #DetallesCosto
+    SELECT
+        ip.id_insumo_producto,
+        i.nombre AS NombreInsumo,
+        ip.cantidad_requerida,
+        m.Descripcion AS MedidaInsumo,
+        m.Abreviatura AS AbreviaturaMedida,
+
+        -- 1. Último precio compra
+        ISNULL((
+            SELECT TOP 1 dc.precioUnitario
+            FROM DETALLE_COMPRA dc
+            INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+            WHERE dc.INSUMO_id_insumo = i.id_insumo
+                AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                AND dc.precioUnitario > 0
+            ORDER BY c.FechaCompra DESC, c.id_compra DESC
+        ), 0) AS UltimoPrecioCompra,
+
+        -- 2. Precio promedio móvil
+        ISNULL((
+            SELECT AVG(dc.precioUnitario)
+            FROM DETALLE_COMPRA dc
+            INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+            WHERE dc.INSUMO_id_insumo = i.id_insumo
+                AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                AND dc.precioUnitario > 0
+                AND c.FechaCompra >= DATEADD(MONTH, -3, GETDATE())
+        ),
+        ISNULL((
+            SELECT TOP 1 dc.precioUnitario
+            FROM DETALLE_COMPRA dc
+            INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+            WHERE dc.INSUMO_id_insumo = i.id_insumo
+                AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                AND dc.precioUnitario > 0
+            ORDER BY c.FechaCompra DESC
+        ), 0)) AS PrecioPromedio3Meses,
+
+        -- 3. Costo del insumo (NORMALIZACIÓN INTELIGENTE)
+        CAST(
+            (
+                ip.cantidad_requerida *
+                CASE
+                    -- Si la medida explícitamente dice gramos o mililitros:
+                    WHEN LOWER(m.Abreviatura) IN ('gr', 'g', 'mls', 'ml')
+                        THEN 0.001
+
+                    -- Si la medida dice Kilos o Litros, pero el usuario puso >= 1.0 (ej. 40 ml de aceite, 150 gr de pollo):
+                    WHEN LOWER(m.Abreviatura) IN ('kg', 'kilo', 'lts', 'lt', 'litros') AND ip.cantidad_requerida >= 1.0
+                        THEN (1.0 / 1000.0)
+
+                    -- Si la medida dice Arroba y puso >= 1.0:
+                    WHEN LOWER(m.Abreviatura) IN ('@') AND ip.cantidad_requerida >= 1.0
+                        THEN (1.0 / 11500.0)
+
+                    ELSE 1.0
+                END
+            ) * ISNULL(
+                COALESCE(
+                    (
+                        SELECT AVG(dc.precioUnitario)
+                        FROM DETALLE_COMPRA dc
+                        INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+                        WHERE dc.INSUMO_id_insumo = i.id_insumo
+                            AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                            AND dc.precioUnitario > 0
+                            AND c.FechaCompra >= DATEADD(MONTH, -3, GETDATE())
+                    ),
+                    (
+                        SELECT TOP 1 dc.precioUnitario
+                        FROM DETALLE_COMPRA dc
+                        INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+                        WHERE dc.INSUMO_id_insumo = i.id_insumo
+                            AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                            AND dc.precioUnitario > 0
+                        ORDER BY c.FechaCompra DESC
+                    )
+                ), 0
+            ) AS DECIMAL(10,2)
+        ) AS CostoInsumo,
+
+        -- 4. Stock actual
+        ISNULL((
+            SELECT TOP 1 si.stock_actual
+            FROM STOCK_INSUMO si
+            WHERE si.INSUMO_id_insumo = i.id_insumo
+                AND (@IdPolleria IS NULL OR si.POLLERIA_id_polleria = @IdPolleria)
+            ORDER BY
+                CASE WHEN @IdPolleria IS NOT NULL AND si.POLLERIA_id_polleria = @IdPolleria THEN 1 ELSE 2 END,
+                si.Fecha_ultimo_movimiento DESC
+        ), 0) AS StockActual,
+
+        -- 5. Capacidad de platos producibles
+        CASE
+            WHEN ISNULL((
+                SELECT TOP 1 si.stock_actual
+                FROM STOCK_INSUMO si
+                WHERE si.INSUMO_id_insumo = i.id_insumo
+                    AND (@IdPolleria IS NULL OR si.POLLERIA_id_polleria = @IdPolleria)
+            ), 0) > 0
+            AND ip.cantidad_requerida > 0
+            THEN FLOOR(
+                ISNULL((
+                    SELECT TOP 1 si.stock_actual
+                    FROM STOCK_INSUMO si
+                    WHERE si.INSUMO_id_insumo = i.id_insumo
+                        AND (@IdPolleria IS NULL OR si.POLLERIA_id_polleria = @IdPolleria)
+                ), 0) /
+                (
+                    ip.cantidad_requerida *
+                    CASE
+                        WHEN LOWER(m.Abreviatura) IN ('gr', 'g', 'mls', 'ml')
+                            THEN 0.001
+                        WHEN LOWER(m.Abreviatura) IN ('kg', 'kilo', 'lts', 'lt', 'litros') AND ip.cantidad_requerida >= 1.0
+                            THEN (1.0 / 1000.0)
+                        WHEN LOWER(m.Abreviatura) IN ('@') AND ip.cantidad_requerida >= 1.0
+                            THEN (1.0 / 11500.0)
+                        ELSE 1.0
+                    END
+                )
+            )
+            ELSE 0
+        END AS UnidadesProducibles
+
+    FROM INSUMO_PRODUCTO ip
+    INNER JOIN INSUMO i ON ip.INSUMO_id_insumo = i.id_insumo
+    INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida
+    WHERE ip.PRODUCTO_id_producto = @IdProducto
+        AND ip.estado = 1
+        AND i.estado = 1
+        AND m.Estado = 1;
+
+    -- Totales
+    SELECT
+        @CostoTotal = ISNULL(SUM(CostoInsumo), 0),
+        @TotalInsumos = ISNULL(COUNT(*), 0),
+        @UnidadesMaximasProducibles = ISNULL(MIN(UnidadesProducibles), 0)
+    FROM #DetallesCosto;
+
+    IF @TotalInsumos = 0
+    BEGIN
+        SELECT * FROM #DetallesCosto ORDER BY NombreInsumo;
+
+        SELECT
+            @IdProducto AS IdProducto,
+            @NombreProducto AS NombreProducto,
+            ISNULL(@PrecioVenta, 0) AS PrecioVenta,
+            0.00 AS CostoTotalProduccion,
+            ISNULL(@PrecioVenta, 0) AS GananciaUnitaria,
+            100.00 AS PorcentajeMargen,
+            0 AS TotalInsumos,
+            0 AS UnidadesMaximasProducibles;
+    END
+    ELSE
+    BEGIN
+        SELECT * FROM #DetallesCosto ORDER BY CostoInsumo DESC;
+
+        SELECT
+            @IdProducto AS IdProducto,
+            @NombreProducto AS NombreProducto,
+            ISNULL(@PrecioVenta, 0) AS PrecioVenta,
+            @CostoTotal AS CostoTotalProduccion,
+            ISNULL(@PrecioVenta - @CostoTotal, 0) AS GananciaUnitaria,
+            CASE
+                WHEN ISNULL(@PrecioVenta, 0) > 0
+                THEN ((@PrecioVenta - @CostoTotal) / @PrecioVenta) * 100
+                ELSE 0
+            END AS PorcentajeMargen,
+            @TotalInsumos AS TotalInsumos,
+            @UnidadesMaximasProducibles AS UnidadesMaximasProducibles;
+    END
+
+    DROP TABLE #DetallesCosto;
+END;
+GO
