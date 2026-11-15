@@ -64,9 +64,5 @@ namespace PTesis.Controllers
             return View(modelo);
         }
 
-        private CMPolleria ObtenerPolleriaActiva()
-        {
-            return new CMPolleria { id_polleria = 5, Nombre = "El Escondite del Loro" };
-        }
     }
 }

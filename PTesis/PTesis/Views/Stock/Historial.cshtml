@@ -10,9 +10,12 @@
 }
 
 <div class="container-fluid px-4">
-    <div class="mt-4 mb-3">
-        <h2 class="fw-bold"><i class="fas fa-history me-2 text-primary"></i>Historial de Movimientos</h2>
-        <p class="text-muted">Entradas, salidas, ajustes y transferencias de stock</p>
+    <div class="d-flex justify-content-between align-items-start mt-4 mb-3">
+        <div>
+            <h2 class="fw-bold"><i class="fas fa-history me-2 text-primary"></i>Historial de Movimientos</h2>
+            <p class="text-muted">Entradas, salidas, ajustes y transferencias de stock</p>
+        </div>
+        <a href="@Url.Action("Productos", "Stock")" class="btn btn-secondary"><i class="fas fa-arrow-left me-1"></i>Volver</a>
     </div>
 
     <div class="card shadow-sm border-0 mb-4">
@@ -109,5 +112,4 @@
         </div>
     </div>
 
-    <a href="@Url.Action("Productos", "Stock")" class="btn btn-secondary mb-4"><i class="fas fa-arrow-left me-1"></i>Volver</a>
 </div>

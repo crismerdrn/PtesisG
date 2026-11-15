@@ -413,76 +413,65 @@ namespace CapaDatos
 
 
                     string query = @"
-
-            SELECT 
-
-                p.id_producto AS IdProducto,
-
-                p.Nombre AS NombreProducto,
-
-                ISNULL(p.Descripcion, '') AS Descripcion,
-
-                ISNULL(p.PrecioVenta, 0) AS PrecioVenta,
-
-                ISNULL(m.Descripcion, 'Unidad') AS Medida,
-
-                ISNULL(m.Abreviatura, 'Un.') AS Abreviatura,
-
-                tp.descripcion AS TipoProducto,
-
-                ISNULL(s.stock_minimo, 0) AS StockMinimo,
-
-                @IdPolleria AS IdPolleria,
-
-                poll.Nombre AS NombrePolleria,
-
-                -- Si es elaborado, mostramos disponibilidad virtual alta; si no, el stock de almacén
-
-                CASE 
-
-                    WHEN EXISTS (SELECT 1 FROM INSUMO_PRODUCTO ip WHERE ip.PRODUCTO_id_producto = p.id_producto AND ip.estado = 1) THEN 999
-
-                    ELSE ISNULL(s.stock_actual, 0)
-
-                END AS StockActual,
-
-                CASE 
-
-                    WHEN EXISTS (SELECT 1 FROM INSUMO_PRODUCTO ip WHERE ip.PRODUCTO_id_producto = p.id_producto AND ip.estado = 1) THEN 'DISPONIBLE'
-
-                    WHEN ISNULL(s.stock_actual, 0) <= 0 THEN 'SIN STOCK'
-
-                    WHEN ISNULL(s.stock_actual, 0) <= ISNULL(s.stock_minimo, 0) THEN 'BAJO'
-
+            -- Productos elaborados: porciones que alcanzan con el stock de insumos de la pollería,
+            -- usando la misma conversión de medidas que sp_Venta_ValidarStock.
+            WITH Receta AS (
+                SELECT
+                    ip.PRODUCTO_id_producto AS IdProducto,
+                    ISNULL(si.stock_actual, 0) /
+                        NULLIF(ip.cantidad_requerida *
+                            CASE
+                                WHEN m.FactorConversion = 1.0 AND ip.cantidad_requerida >= 1.0 AND LOWER(m.Abreviatura) IN ('kg', 'lts')
+                                    THEN 0.001
+                                ELSE ISNULL(m.FactorConversion, 1.0)
+                            END, 0) AS Porciones
+                FROM INSUMO_PRODUCTO ip
+                INNER JOIN INSUMO i ON ip.INSUMO_id_insumo = i.id_insumo
+                INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida
+                LEFT JOIN STOCK_INSUMO si ON si.INSUMO_id_insumo = ip.INSUMO_id_insumo AND si.POLLERIA_id_polleria = @IdPolleria
+                WHERE ip.estado = 1
+            ),
+            Elaborados AS (
+                SELECT IdProducto,
+                       CASE WHEN MIN(ISNULL(Porciones, 0)) < 0 THEN 0 ELSE FLOOR(MIN(ISNULL(Porciones, 0))) END AS Porciones
+                FROM Receta
+                GROUP BY IdProducto
+            ),
+            Base AS (
+                SELECT
+                    p.id_producto AS IdProducto,
+                    p.Nombre AS NombreProducto,
+                    ISNULL(p.Descripcion, '') AS Descripcion,
+                    ISNULL(p.PrecioVenta, 0) AS PrecioVenta,
+                    ISNULL(m.Descripcion, 'Unidad') AS Medida,
+                    ISNULL(m.Abreviatura, 'Un.') AS Abreviatura,
+                    tp.descripcion AS TipoProducto,
+                    CASE WHEN e.IdProducto IS NOT NULL THEN 0 ELSE ISNULL(s.stock_minimo, 0) END AS StockMinimo,
+                    @IdPolleria AS IdPolleria,
+                    poll.Nombre AS NombrePolleria,
+                    CAST(CASE WHEN e.IdProducto IS NOT NULL THEN e.Porciones ELSE ISNULL(s.stock_actual, 0) END AS DECIMAL(10,2)) AS StockActual,
+                    CAST(CASE WHEN e.IdProducto IS NOT NULL THEN 1 ELSE 0 END AS BIT) AS EsElaborado,
+                    s.Fecha_ultimo_movimiento AS FechaUltimoMovimiento
+                FROM PRODUCTO p
+                LEFT JOIN Elaborados e ON e.IdProducto = p.id_producto
+                LEFT JOIN STOCK s ON p.id_producto = s.PRODUCTO_id_producto AND s.POLLERIA_id_polleria = @IdPolleria
+                LEFT JOIN POLLERIA poll ON poll.id_polleria = @IdPolleria
+                LEFT JOIN MEDIDAS m ON p.MEDIDAS_id_medida = m.id_medida
+                LEFT JOIN TIPO_PRODUCTO tp ON p.TIPO_PRODUCTO_id_tipoProducto = tp.id_tipoProducto
+                WHERE p.Estado = 1
+            )
+            SELECT
+                IdProducto, NombreProducto, Descripcion, PrecioVenta, Medida, Abreviatura, TipoProducto,
+                StockMinimo, IdPolleria, NombrePolleria, StockActual, EsElaborado, FechaUltimoMovimiento,
+                CASE
+                    WHEN StockActual <= 0 THEN 'SIN STOCK'
+                    WHEN EsElaborado = 1 THEN 'DISPONIBLE'
+                    WHEN StockActual <= StockMinimo THEN 'BAJO'
                     ELSE 'NORMAL'
-
-                END AS EstadoStock,
-
-                s.Fecha_ultimo_movimiento AS FechaUltimoMovimiento
-
-            FROM PRODUCTO p
-
-            LEFT JOIN STOCK s ON p.id_producto = s.PRODUCTO_id_producto AND s.POLLERIA_id_polleria = @IdPolleria
-
-            LEFT JOIN POLLERIA poll ON poll.id_polleria = @IdPolleria
-
-            LEFT JOIN MEDIDAS m ON p.MEDIDAS_id_medida = m.id_medida
-
-            LEFT JOIN TIPO_PRODUCTO tp ON p.TIPO_PRODUCTO_id_tipoProducto = tp.id_tipoProducto
-
-            WHERE p.Estado = 1
-
-              -- Filtro: si soloConStock = 1, los elaborados SIEMPRE pasan, y los de reventa deben tener stock > 0
-
-              AND (
-
-                  EXISTS (SELECT 1 FROM INSUMO_PRODUCTO ip WHERE ip.PRODUCTO_id_producto = p.id_producto AND ip.estado = 1)
-
-                  OR (@SoloConStock = 0 OR ISNULL(s.stock_actual, 0) > 0)
-
-              )
-
-            ORDER BY p.Nombre ASC";
+                END AS EstadoStock
+            FROM Base
+            WHERE @SoloConStock = 0 OR StockActual > 0
+            ORDER BY NombreProducto ASC";
 
 
 
@@ -1177,6 +1166,7 @@ namespace CapaDatos
 
         public DateTime FechaUltimoMovimiento { get; set; }
 
+        public bool EsElaborado { get; set; }
         public bool TieneStockSuficiente { get; set; }
 
 

@@ -453,7 +453,8 @@ namespace PTesis.Controllers
             var ajuste = new CMAjusteStock
             {
                 FechaAjuste = DateTime.Now,
-                IdUsuario = ObtenerUsuarioActual()?.id_usuario ?? 0
+                IdUsuario = ObtenerUsuarioActual()?.id_usuario ?? 0,
+                IdPolleria = ObtenerPolleriaActiva()?.id_polleria ?? 0
             };
 
             if (idProducto.HasValue && idPolleria.HasValue)
@@ -491,7 +492,12 @@ namespace PTesis.Controllers
 
             try
             {
-                if (ModelState.IsValid)
+                var errorAjuste = ValidarStockAjustable(ajuste.IdProducto, ajuste.IdPolleria);
+                if (errorAjuste != null)
+                {
+                    TempData["Error"] = errorAjuste;
+                }
+                else if (ModelState.IsValid)
                 {
                     ajuste.IdUsuario = ObtenerUsuarioActual()?.id_usuario ?? 0;
 
@@ -531,7 +537,8 @@ namespace PTesis.Controllers
             var transferencia = new CMTransfersVentaStock
             {
                 FechaTransferencia = DateTime.Now,
-                IdUsuario = ObtenerUsuarioActual()?.id_usuario ?? 0
+                IdUsuario = ObtenerUsuarioActual()?.id_usuario ?? 0,
+                IdPolleriaOrigen = ObtenerPolleriaActiva()?.id_polleria ?? 0
             };
 
             ViewBag.ListaPollerias = ObtenerListaPollerias();
@@ -553,7 +560,14 @@ namespace PTesis.Controllers
 
             try
             {
-                if (ModelState.IsValid)
+                var errorTransferencia = ValidarStockAjustable(transferencia.IdProducto, transferencia.IdPolleriaOrigen)
+                    ?? (EsPolleriaActiva(transferencia.IdPolleriaDestino) ? null : "La pollería de destino no existe o está inactiva.")
+                    ?? (transferencia.IdPolleriaDestino == transferencia.IdPolleriaOrigen ? "La pollería de destino debe ser distinta a la de origen." : null);
+                if (errorTransferencia != null)
+                {
+                    TempData["Error"] = errorTransferencia;
+                }
+                else if (ModelState.IsValid)
                 {
                     transferencia.IdUsuario = ObtenerUsuarioActual()?.id_usuario ?? 0;
 
@@ -977,13 +991,28 @@ namespace PTesis.Controllers
         {
             try
             {
-                var pollerias = new CDPolleria().Listar();
-                return new SelectList(pollerias, "id_polleria", "Nombre");
+                return new SelectList(ObtenerPolleriasActivas(), "id_polleria", "Nombre", ObtenerPolleriaActiva()?.id_polleria);
             }
             catch
             {
                 return new SelectList(new List<CMPolleria>(), "id_polleria", "Nombre");
             }
+        }
+
+        /// <summary>
+        /// El stock de productos elaborados (con receta) sale de sus insumos; solo se ajusta o transfiere
+        /// el stock de productos de reventa, y únicamente en pollerías activas.
+        /// </summary>
+        private string ValidarStockAjustable(int idProducto, int idPolleria)
+        {
+            if (!EsPolleriaActiva(idPolleria))
+                return "La pollería seleccionada no existe o está inactiva.";
+
+            var producto = cdVenta.ObtenerStockDisponible(idPolleria, false).FirstOrDefault(p => p.IdProducto == idProducto);
+            if (producto != null && producto.EsElaborado)
+                return $"{producto.NombreProducto} es un producto elaborado: su disponibilidad depende del stock de sus insumos. Ajuste o transfiera los insumos desde el módulo Stock.";
+
+            return null;
         }
 
         private SelectList ObtenerListaProductos()
@@ -992,6 +1021,7 @@ namespace PTesis.Controllers
             {
                 var polleria = ObtenerPolleriaActiva();
                 var productos = cdVenta.ObtenerStockDisponible(polleria?.id_polleria, false)
+                    .Where(p => !p.EsElaborado)
                     .Select(p => new { id_producto = p.IdProducto, Nombre = p.NombreProducto })
                     .Distinct()
                     .ToList();
@@ -1031,35 +1061,6 @@ namespace PTesis.Controllers
             return new SelectList(tipos, "Value", "Text");
         }
 
-        private CMPolleria ObtenerPolleriaActiva()
-        {
-            try
-            {
-                using (var conexion = new SqlConnection(Conexion.CN))
-                {
-                    conexion.Open();
-                    string query = "SELECT TOP 1 id_polleria, nombre, direccion, telefono, estado FROM POLLERIA WHERE estado = 1 ORDER BY id_polleria";
-                    var polleria = conexion.QueryFirstOrDefault<CMPolleria>(query);
-
-                    if (polleria != null)
-                        return polleria;
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"Error obteniendo pollería activa: {ex.Message}");
-            }
-
-            // Fallback: retornar pollería por defecto (ID 5)
-            return new CMPolleria
-            {
-                id_polleria = 5,
-                Nombre = "El Escondite del Loro",
-                Direccion = "B/ La Cabaña",
-                Telefono = "4578512",
-                Estado = true
-            };
-        }
         private Usuario ObtenerUsuarioActual()
         {
             try

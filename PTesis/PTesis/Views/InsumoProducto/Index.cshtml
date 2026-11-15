@@ -95,7 +95,7 @@
                                 <th class="text-center" style="width: 50px;">#</th>
                                 <th style="width: 25%;">Producto</th>
                                 <th style="width: 22%;">Insumo</th>
-                                <th class="text-center" style="width: 14%;">Cantidad Requerida</th>
+                                <th class="text-center" style="width: 14%;">Consumo por unidad</th>
                                 <th>Observaciones</th>
                                 <th class="text-center" style="width: 90px;">Estado</th>
                                 <th class="text-center" style="width: 140px;">Acciones</th>
@@ -115,12 +115,7 @@
                                         <span class="fw-semibold">@item.NombreInsumo</span>
                                     </td>
                                     <td class="text-center">
-                                        <span class="fw-bold fs-6">
-                                            @item.cantidad_requerida.ToString("G29")
-                                        </span>
-                                        <span class="badge bg-light text-dark border ms-1">
-                                            @(string.IsNullOrEmpty(item.AbreviaturaMedida) ? item.MedidaInsumo : item.AbreviaturaMedida)
-                                        </span>
+                                        <span class="fw-bold">@item.ConsumoPorUnidad</span>
                                     </td>
                                     <td>
                                         @if (!string.IsNullOrEmpty(item.observaciones) && item.observaciones != "Sin observaciones")

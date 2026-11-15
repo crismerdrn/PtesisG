@@ -108,11 +108,37 @@
     <script>
         var itemsReceta = [];
 
+        // Misma regla que sp_Venta_RegistrarConStock: en insumos en kg o lts, 1 o más se toma como gr o ml.
+        function describirConsumo(textoInsumo, cantidad) {
+            if (isNaN(cantidad) || cantidad <= 0) return '';
+            var partes = (textoInsumo || '').split(' - ');
+            var abrev = partes.length > 1 ? partes[partes.length - 1].trim() : '';
+            var a = abrev.toLowerCase();
+            if ((a === 'kg' || a === 'lts') && cantidad >= 1) {
+                return cantidad + ' ' + (a === 'kg' ? 'gr' : 'ml') + ' = ' + parseFloat((cantidad / 1000).toFixed(4)) + ' ' + abrev;
+            }
+            return cantidad + ' ' + abrev;
+        }
+
+        function mostrarAyudaConsumo(textoInsumo, cantidad, helper) {
+            var a = ((textoInsumo || '').split(' - ').pop() || '').trim().toLowerCase();
+            var html = '';
+            if (a === 'kg' || a === 'lts') {
+                var menor = a === 'kg' ? 'gramos' : 'mililitros';
+                html = '<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>' + menor + '</strong> (ej: <em>120</em>) o en ' + a +
+                    ' si es menos de 1 (ej: <em>0.12</em>). Un valor de 1 o más se toma como ' + menor + ' (1 ' + a + ' = 1000).';
+            }
+            var consumo = describirConsumo(textoInsumo, cantidad);
+            if (consumo) {
+                html += (html ? '<br />' : '') + '<i class="fas fa-calculator text-success"></i> Por cada unidad vendida se descuenta: <strong>' + consumo + '</strong>';
+            }
+            helper.html(html);
+        }
+
         $(document).ready(function () {
 
-            // Mensaje contextual inteligente según el insumo seleccionado
-            $('#tempInsumo').on('change', function () {
-                var textoSeleccionado = $(this).find('option:selected').text().toLowerCase();
+            // Ayuda según la medida del insumo y consumo real por unidad vendida
+            $('#tempInsumo, #tempCantidad').on('change input', function () {
                 var helper = $('#ayudaMedida');
 
                 if (helper.length === 0) {
@@ -120,15 +146,7 @@
                     helper = $('#ayudaMedida');
                 }
 
-                if (textoSeleccionado.indexOf('arroz') !== -1 || textoSeleccionado.indexOf('papa') !== -1) {
-                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos (gr)</strong> (ej: <em>120</em>) o fracción.');
-                } else if (textoSeleccionado.indexOf('aceite') !== -1) {
-                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese consumo en <strong>Mililitros (mls)</strong> (ej: <em>40</em>).');
-                } else if (textoSeleccionado.indexOf('pollo') !== -1) {
-                    helper.html('<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>Gramos</strong> (ej: <em>300</em>) o en <strong>Kilos</strong> (ej: <em>0.3</em>).');
-                } else {
-                    helper.empty();
-                }
+                mostrarAyudaConsumo($('#tempInsumo option:selected').text(), parseFloat($('#tempCantidad').val()), helper);
             });
 
             // Botón Agregar
@@ -168,6 +186,7 @@
 
                 $('#tempInsumo').val('').trigger('change');
                 $('#tempCantidad').val('');
+                $('#ayudaMedida').empty();
                 $('#tempObservacion').val('');
             });
 
@@ -209,7 +228,7 @@
                 itemsReceta.forEach(function (item, index) {
                     var tr = $('<tr></tr>');
                     tr.append('<td><strong>' + item.NombreInsumo + '</strong></td>');
-                    tr.append('<td class="text-center fw-bold">' + item.cantidad_requerida + '</td>');
+                    tr.append('<td class="text-center fw-bold">' + describirConsumo(item.NombreInsumo, item.cantidad_requerida) + '</td>');
                     tr.append('<td>' + (item.observaciones ? item.observaciones : '<span class="text-muted fst-italic">Sin observaciones</span>') + '</td>');
                     tr.append('<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm btn-quitar" data-index="' + index + '"><i class="fas fa-times me-1"></i> Quitar</button></td>');
                     tbody.append(tr);

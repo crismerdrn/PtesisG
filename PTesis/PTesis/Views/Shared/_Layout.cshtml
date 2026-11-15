@@ -6,6 +6,8 @@
     var usuario = Session["Usuario"] as Usuario;
     var permisos = usuario?.Permisos ?? new List<string>();
     var esAdmin = usuario?.Rol == "Administrador";
+    var polleriasTrabajo = ViewBag.PolleriasTrabajo as List<CMPolleria> ?? new List<CMPolleria>();
+    var polleriaTrabajo = ViewBag.PolleriaTrabajo as CMPolleria;
 }
 
 <!DOCTYPE html>
@@ -32,6 +34,38 @@
         </div>
 
         <ul class="navbar-nav ms-auto me-3">
+            @if (polleriaTrabajo != null)
+            {
+                <li class="nav-item dropdown me-2">
+                    @if (polleriasTrabajo.Count > 1)
+                    {
+                        <a class="nav-link dropdown-toggle" id="polleriaDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false" title="Pollería en la que trabaja">
+                            <i class="fas fa-store fa-fw me-1"></i><span>@polleriaTrabajo.Nombre</span>
+                        </a>
+                        <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="polleriaDropdown">
+                            <li><div class="dropdown-header">Trabajar en la pollería</div></li>
+                            @foreach (var p in polleriasTrabajo)
+                            {
+                                <li>
+                                    @using (Html.BeginForm("CambiarPolleria", "Home", FormMethod.Post))
+                                    {
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="idPolleria" value="@p.id_polleria" />
+                                        <input type="hidden" name="returnUrl" value="@Request.RawUrl" />
+                                        <button type="submit" class="dropdown-item @(p.id_polleria == polleriaTrabajo.id_polleria ? "active" : "")">
+                                            <i class="fas fa-store me-2"></i>@p.Nombre
+                                        </button>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    }
+                    else
+                    {
+                        <span class="nav-link" title="Pollería en la que trabaja"><i class="fas fa-store fa-fw me-1"></i>@polleriaTrabajo.Nombre</span>
+                    }
+                </li>
+            }
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" id="navbarDropdown" href="#" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="fas fa-user fa-fw me-1"></i>
