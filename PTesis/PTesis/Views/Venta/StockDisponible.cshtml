@@ -164,7 +164,7 @@
                                         }
                                     </td>
                                     <td class="text-center">
-                                        <small>@(producto.FechaUltimoMovimiento != DateTime.MinValue ? producto.FechaUltimoMovimiento.ToString("dd/MM/yyyy HH:mm") : "Sin movimientos")</small>
+                                        <small>@(producto.EsElaborado ? "Ver insumos" : producto.FechaUltimoMovimiento != DateTime.MinValue ? producto.FechaUltimoMovimiento.ToString("dd/MM/yyyy HH:mm") : "Sin movimientos")</small>
                                     </td>
                                     <td class="text-end">
                                         Bs. @producto.PrecioVenta.ToString("0.00")
