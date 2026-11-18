@@ -658,6 +658,11 @@ namespace PTesis.Controllers
         [HttpPost]
         public JsonResult ObtenerPresentaciones(int idInsumo)
         {
+            if (!TienePermiso("Compras"))
+            {
+                return Json(new List<object>(), JsonRequestBehavior.AllowGet);
+            }
+
             var presentaciones = cdInsumo.ListarPresentaciones(idInsumo, true)
                 .Select(p => new { id = p.id_presentacion, nombre = p.nombre, factor = p.factor })
                 .ToList();
