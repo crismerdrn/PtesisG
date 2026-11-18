@@ -1666,3 +1666,388 @@ BEGIN
     );
 END;
 GO
+
+-- ============================================================================
+-- Presentaciones de compra por insumo (ej. Arroz en kg: Quintal = 46, Arroba = 11.5;
+-- Plátano en unidades: Racimo = 50; Pollo en presas: Pollo entero = 8).
+-- La compra se registra en la presentación y el stock se guarda en la unidad del insumo.
+-- ============================================================================
+IF OBJECT_ID('dbo.PRESENTACION_INSUMO', 'U') IS NULL
+BEGIN
+    CREATE TABLE dbo.PRESENTACION_INSUMO (
+        id_presentacion INT IDENTITY(1,1) PRIMARY KEY,
+        INSUMO_id_insumo INT NOT NULL,
+        nombre VARCHAR(100) NOT NULL,
+        factor DECIMAL(12,4) NOT NULL,
+        estado BIT NOT NULL DEFAULT 1,
+        fecha_registro DATETIME NOT NULL DEFAULT GETDATE(),
+        CONSTRAINT FK_PRESENTACION_INSUMO_INSUMO FOREIGN KEY (INSUMO_id_insumo) REFERENCES dbo.INSUMO(id_insumo),
+        CONSTRAINT UQ_PRESENTACION_INSUMO_NOMBRE UNIQUE (INSUMO_id_insumo, nombre),
+        CONSTRAINT CK_PRESENTACION_INSUMO_FACTOR CHECK (factor > 0)
+    );
+END
+GO
+
+IF COL_LENGTH('dbo.DETALLE_COMPRA', 'PRESENTACION_id_presentacion') IS NULL
+BEGIN
+    ALTER TABLE dbo.DETALLE_COMPRA ADD
+        PRESENTACION_id_presentacion INT NULL
+            CONSTRAINT FK_DETALLE_COMPRA_PRESENTACION REFERENCES dbo.PRESENTACION_INSUMO(id_presentacion),
+        cantidad_presentacion DECIMAL(12,4) NULL;
+END
+GO
+
+-- cantidad queda en la unidad del insumo (2 qq = 92 kg) y precioUnitario por esa unidad (368 Bs/qq = 8 Bs/kg).
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DETALLE_COMPRA') AND name = 'cantidad' AND scale < 4)
+    ALTER TABLE dbo.DETALLE_COMPRA ALTER COLUMN cantidad DECIMAL(12,4) NOT NULL;
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DETALLE_COMPRA') AND name = 'precioUnitario' AND scale < 4)
+    ALTER TABLE dbo.DETALLE_COMPRA ALTER COLUMN precioUnitario DECIMAL(12,4) NOT NULL;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_Compra_Registrar]
+    @IdUsuario INT,
+    @IdProveedor INT,
+    @IdPolleria INT,
+    @IdTipoCompra INT = NULL,
+    @IdTipoPago INT = 1, -- Parámetro para seleccionar la forma de pago (1 por defecto si no se especifica)
+    @Referencia VARCHAR(100) = NULL,
+    @MontoTotal DECIMAL(10,2),
+    @Estado VARCHAR(50) = 'COMPLETADA',
+    @Detalles XML,
+    @Resultado BIT OUTPUT,
+    @Mensaje VARCHAR(500) OUTPUT,
+    @IdCompraGenerada INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @Resultado = 0;
+    SET @IdCompraGenerada = 0;
+    SET @Mensaje = '';
+
+    DECLARE @TablaDetalles TABLE (
+        RowID INT IDENTITY(1,1),
+        IdItem INT,
+        Tipo VARCHAR(20),
+        IdPresentacion INT NULL,
+        CantidadPresentacion DECIMAL(12,4) NULL,
+        Cantidad DECIMAL(12,4),
+        PrecioUnitario DECIMAL(12,4),
+        Subtotal DECIMAL(10,2)
+    );
+
+    BEGIN TRY
+        -- 1. VALIDACIONES BÁSICAS
+        IF NOT EXISTS (SELECT 1 FROM USUARIOS WHERE id_usuario = @IdUsuario AND estado = 1)
+        BEGIN
+            SET @Mensaje = 'Usuario no válido o inactivo';
+            RETURN;
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM PROVEEDOR WHERE id_proveedor = @IdProveedor AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'Proveedor no válido o inactivo';
+            RETURN;
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM POLLERIA WHERE id_polleria = @IdPolleria AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'Pollería no válida o inactiva';
+            RETURN;
+        END
+
+        IF @IdTipoPago IS NOT NULL AND NOT EXISTS (SELECT 1 FROM TIPO_PAGO WHERE id_tipoPago = @IdTipoPago AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'El tipo de pago seleccionado no es válido o está inactivo';
+            RETURN;
+        END
+
+        -- 2. PARSEAR DETALLES XML
+        INSERT INTO @TablaDetalles (IdItem, Tipo, IdPresentacion, Cantidad, PrecioUnitario, Subtotal)
+        SELECT
+            T.Item.value('@IdItem', 'INT'),
+            T.Item.value('@Tipo', 'VARCHAR(20)'),
+            NULLIF(T.Item.value('@IdPresentacion', 'INT'), 0),
+            T.Item.value('@Cantidad', 'DECIMAL(12,4)'),
+            T.Item.value('@PrecioUnitario', 'DECIMAL(12,4)'),
+            T.Item.value('@Subtotal', 'DECIMAL(10,2)')
+        FROM @Detalles.nodes('/Detalles/Detalle') AS T(Item);
+
+        IF NOT EXISTS (SELECT 1 FROM @TablaDetalles)
+        BEGIN
+            SET @Mensaje = 'Debe ingresar al menos un detalle';
+            RETURN;
+        END
+
+        -- 2.1 PRESENTACIONES DE COMPRA: la cantidad llega en la presentación (ej. 2 quintales)
+        --     y se convierte a la unidad del insumo (ej. 92 kg) para el stock y el precio unitario.
+        IF EXISTS (
+            SELECT 1 FROM @TablaDetalles td
+            WHERE td.IdPresentacion IS NOT NULL
+              AND (td.Tipo <> 'INSUMO' OR NOT EXISTS (
+                    SELECT 1 FROM PRESENTACION_INSUMO pi
+                    WHERE pi.id_presentacion = td.IdPresentacion
+                      AND pi.INSUMO_id_insumo = td.IdItem
+                      AND pi.estado = 1))
+        )
+        BEGIN
+            SET @Mensaje = 'La presentación seleccionada no es válida para el insumo';
+            RETURN;
+        END
+
+        UPDATE td
+        SET CantidadPresentacion = td.Cantidad,
+            Cantidad = td.Cantidad * pi.factor,
+            PrecioUnitario = CASE WHEN td.Cantidad * pi.factor > 0 THEN td.Subtotal / (td.Cantidad * pi.factor) ELSE 0 END
+        FROM @TablaDetalles td
+        INNER JOIN PRESENTACION_INSUMO pi ON pi.id_presentacion = td.IdPresentacion;
+
+        -- 3. VALIDAR ITEMS
+        DECLARE @IdItem INT, @Tipo VARCHAR(20), @Cantidad DECIMAL(12,4);
+        DECLARE @RowCount INT = 1, @MaxRow INT = (SELECT MAX(RowID) FROM @TablaDetalles);
+
+        WHILE @RowCount <= @MaxRow
+        BEGIN
+            SELECT @IdItem = IdItem, @Tipo = Tipo, @Cantidad = Cantidad
+            FROM @TablaDetalles WHERE RowID = @RowCount;
+
+            IF @Tipo = 'PRODUCTO'
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM PRODUCTO WHERE id_producto = @IdItem AND Estado = 1)
+                BEGIN
+                    SET @Mensaje = 'Producto ID ' + CAST(@IdItem AS VARCHAR) + ' no existe o está inactivo';
+                    RETURN;
+                END
+            END
+            ELSE IF @Tipo = 'INSUMO'
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM INSUMO WHERE id_insumo = @IdItem AND estado = 1)
+                BEGIN
+                    SET @Mensaje = 'Insumo ID ' + CAST(@IdItem AS VARCHAR) + ' no existe o está inactivo';
+                    RETURN;
+                END
+            END
+            ELSE
+            BEGIN
+                SET @Mensaje = 'Tipo de item no válido: ' + @Tipo;
+                RETURN;
+            END
+
+            IF @Cantidad <= 0
+            BEGIN
+                SET @Mensaje = 'La cantidad debe ser mayor a 0 para el item ID ' + CAST(@IdItem AS VARCHAR);
+                RETURN;
+            END
+
+            SET @RowCount = @RowCount + 1;
+        END
+
+        -- 4. INICIAR TRANSACCIÓN
+        BEGIN TRANSACTION;
+
+        -- 5. INSERTAR CABECERA DE COMPRA
+        INSERT INTO COMPRA (
+            Referencia,
+            MontoTotal,
+            FechaCompra,
+            FechaRegistro,
+            Estado,
+            USUARIOS_id_usuario,
+            PROVEEDOR_id_proveedor,
+            TIPO_COMPRA_id_tipoCompra
+        ) VALUES (
+            @Referencia,
+            @MontoTotal,
+            GETDATE(),
+            GETDATE(),
+            @Estado,
+            @IdUsuario,
+            @IdProveedor,
+            @IdTipoCompra
+        );
+
+        SET @IdCompraGenerada = SCOPE_IDENTITY();
+
+        -- 6. INSERTAR DETALLES
+        INSERT INTO DETALLE_COMPRA (
+            precioUnitario,
+            cantidad,
+            subtotal,
+            COMPRA_id_compra,
+            PRODUCTO_id_producto,
+            INSUMO_id_insumo,
+            PRESENTACION_id_presentacion,
+            cantidad_presentacion
+        )
+        SELECT
+            PrecioUnitario,
+            Cantidad,
+            Subtotal,
+            @IdCompraGenerada,
+            CASE WHEN Tipo = 'PRODUCTO' THEN IdItem ELSE NULL END,
+            CASE WHEN Tipo = 'INSUMO' THEN IdItem ELSE NULL END,
+            IdPresentacion,
+            CantidadPresentacion
+        FROM @TablaDetalles;
+
+        -- 7. ACTUALIZAR STOCK Y REGISTRAR PAGO SI ESTÁ COMPLETADA
+        IF @Estado = 'COMPLETADA'
+        BEGIN
+            DECLARE @ObservacionesMovimiento VARCHAR(500) = 'Compra N° ' +
+                CASE
+                    WHEN @Referencia IS NOT NULL AND RTRIM(LTRIM(@Referencia)) <> '' THEN @Referencia
+                    ELSE CAST(@IdCompraGenerada AS VARCHAR(10))
+                END;
+
+            SET @RowCount = 1;
+
+            WHILE @RowCount <= @MaxRow
+            BEGIN
+                SELECT @IdItem = IdItem, @Tipo = Tipo, @Cantidad = Cantidad
+                FROM @TablaDetalles WHERE RowID = @RowCount;
+
+                IF @Tipo = 'PRODUCTO'
+                BEGIN
+                    EXEC dbo.sp_ActualizarStockProducto
+                        @id_producto = @IdItem,
+                        @id_polleria = @IdPolleria,
+                        @cantidad = @Cantidad,
+                        @id_usuario = @IdUsuario,
+                        @tipo_movimiento = 'COMPRA',
+                        @id_referencia = @IdCompraGenerada,
+                        @observaciones = @ObservacionesMovimiento;
+                END
+                ELSE IF @Tipo = 'INSUMO'
+                BEGIN
+                    EXEC dbo.sp_ActualizarStockInsumo
+                        @id_insumo = @IdItem,
+                        @id_polleria = @IdPolleria,
+                        @cantidad = @Cantidad,
+                        @id_usuario = @IdUsuario,
+                        @tipo_movimiento = 'COMPRA',
+                        @id_referencia = @IdCompraGenerada,
+                        @observaciones = @ObservacionesMovimiento;
+                END
+
+                SET @RowCount = @RowCount + 1;
+            END
+
+            -- Registrar pago con el tipo de pago enviado por el usuario
+            INSERT INTO PAGO_COMPRA (
+                monto,
+                fecha_pago,
+                estado,
+                COMPRA_id_compra,
+                TIPO_PAGO_id_tipoPago
+            ) VALUES (
+                @MontoTotal,
+                GETDATE(),
+                1,
+                @IdCompraGenerada,
+                ISNULL(@IdTipoPago, 1)
+            );
+        END
+
+        SET @Resultado = 1;
+        SET @Mensaje = 'Compra registrada exitosamente. ID: ' + CAST(@IdCompraGenerada AS VARCHAR);
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SET @Resultado = 0;
+        SET @Mensaje = 'Error al registrar compra: ' + ERROR_MESSAGE();
+    END CATCH
+END;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_Compra_Completar]
+    @IdCompra INT,
+    @IdPolleria INT,
+    @IdUsuario INT,
+    @Resultado BIT OUTPUT,
+    @Mensaje VARCHAR(500) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @Resultado = 0;
+    SET @Mensaje = '';
+
+    BEGIN TRY
+        DECLARE @EstadoActual VARCHAR(50), @MontoTotal DECIMAL(10,2), @Referencia VARCHAR(100);
+
+        SELECT
+            @EstadoActual = Estado,
+            @MontoTotal = MontoTotal,
+            @Referencia = Referencia
+        FROM COMPRA
+        WHERE id_compra = @IdCompra;
+
+        IF @EstadoActual IS NULL
+        BEGIN
+            SET @Mensaje = 'La compra no existe';
+            RETURN;
+        END
+
+        IF @EstadoActual <> 'PENDIENTE'
+        BEGIN
+            SET @Mensaje = 'Solo se pueden completar compras en estado PENDIENTE. Estado actual: ' + @EstadoActual;
+            RETURN;
+        END
+
+        BEGIN TRANSACTION;
+
+        UPDATE COMPRA
+        SET Estado = 'COMPLETADA'
+        WHERE id_compra = @IdCompra;
+
+        INSERT INTO PAGO_COMPRA (monto, fecha_pago, estado, COMPRA_id_compra, TIPO_PAGO_id_tipoPago)
+        VALUES (@MontoTotal, GETDATE(), 1, @IdCompra, 1);
+
+        DECLARE @Observaciones VARCHAR(500) = 'Compra Completada N° ' + ISNULL(@Referencia, CAST(@IdCompra AS VARCHAR));
+
+        DECLARE @Detalles TABLE (
+            RowID INT IDENTITY(1,1),
+            IdProducto INT,
+            IdInsumo INT,
+            Cantidad DECIMAL(12,4)
+        );
+
+        INSERT INTO @Detalles (IdProducto, IdInsumo, Cantidad)
+        SELECT PRODUCTO_id_producto, INSUMO_id_insumo, cantidad
+        FROM DETALLE_COMPRA
+        WHERE COMPRA_id_compra = @IdCompra;
+
+        DECLARE @Row INT = 1, @Max INT = (SELECT MAX(RowID) FROM @Detalles);
+        DECLARE @IdP INT, @IdI INT, @Cant DECIMAL(12,4);
+
+        WHILE @Row <= @Max
+        BEGIN
+            SELECT @IdP = IdProducto, @IdI = IdInsumo, @Cant = Cantidad FROM @Detalles WHERE RowID = @Row;
+
+            IF @IdP IS NOT NULL
+            BEGIN
+                EXEC dbo.sp_ActualizarStockProducto @id_producto = @IdP, @id_polleria = @IdPolleria, @cantidad = @Cant, @id_usuario = @IdUsuario, @tipo_movimiento = 'COMPRA', @id_referencia = @IdCompra, @observaciones = @Observaciones;
+            END
+            ELSE IF @IdI IS NOT NULL
+            BEGIN
+                EXEC dbo.sp_ActualizarStockInsumo @id_insumo = @IdI, @id_polleria = @IdPolleria, @cantidad = @Cant, @id_usuario = @IdUsuario, @tipo_movimiento = 'COMPRA', @id_referencia = @IdCompra, @observaciones = @Observaciones;
+            END
+
+            SET @Row = @Row + 1;
+        END
+
+        COMMIT TRANSACTION;
+
+        SET @Resultado = 1;
+        SET @Mensaje = 'Compra completada y stock actualizado exitosamente';
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        SET @Resultado = 0;
+        SET @Mensaje = 'Error al completar compra: ' + ERROR_MESSAGE();
+    END CATCH
+END;
+GO
