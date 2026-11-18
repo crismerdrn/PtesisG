@@ -642,6 +642,30 @@ namespace PTesis.Controllers
 
         #region Métodos AJAX
 
+        // Guarniciones y presas que se eligen al vender un producto elaborado
+        [HttpPost]
+        public JsonResult ObtenerOpcionesProducto(int idProducto)
+        {
+            try
+            {
+                var opciones = new CDInsumoProducto().ObtenerRecetaConTipo(idProducto)
+                    .Where(o => o.tipo_consumo == "GUARNICION" || o.tipo_consumo == "PRESA")
+                    .Select(o => new
+                    {
+                        id = o.id_insumo_producto,
+                        tipo = o.tipo_consumo,
+                        insumo = o.NombreInsumo,
+                        cantidad = o.cantidad_requerida,
+                        abreviatura = o.AbreviaturaMedida
+                    }).ToList();
+                return Json(new { success = true, opciones });
+            }
+            catch (Exception ex)
+            {
+                return Json(new { success = false, message = ex.Message, opciones = new object[0] });
+            }
+        }
+
         [HttpPost]
         public JsonResult BuscarProductos(string term)
         {
@@ -963,6 +987,7 @@ namespace PTesis.Controllers
                             DescripcionProducto = item.descripcion?.ToString() ?? "",
                             Medida = item.medida?.ToString() ?? "",
                             AbreviaturaMedida = item.abreviatura?.ToString() ?? "",
+                            Opciones = item.opciones?.ToString(),
                             StockDisponible = item.stock != null ? Convert.ToDecimal(item.stock) : 0
                         };
 

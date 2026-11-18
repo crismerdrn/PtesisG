@@ -268,9 +268,66 @@
             });
         }
 
+        function escaparHtml(texto) {
+            return $('<div>').text(texto == null ? '' : String(texto)).html();
+        }
+
+        // Ids de la presa y guarniciones elegidas; null si el producto no tiene opciones
+        function opcionesTexto(d) {
+            if (!d.opciones || d.opciones.length === 0) return null;
+            const ids = (d.guarniciones || []).slice();
+            if (d.presa) ids.unshift(d.presa);
+            return ids.join(',');
+        }
+
+        function tienePresas(d) {
+            return (d.opciones || []).some(o => o.tipo === 'PRESA');
+        }
+
+        function elegirPresa(idx, valor) {
+            detalles[idx].presa = valor ? parseInt(valor) : null;
+        }
+
+        function marcarGuarnicion(idx, id, marcado) {
+            const lista = (detalles[idx].guarniciones || []).filter(g => g !== id);
+            if (marcado) lista.push(id);
+            detalles[idx].guarniciones = lista;
+        }
+
+        function renderizarOpciones(d, idx) {
+            if (!d.opciones || d.opciones.length === 0) return '';
+            const presas = d.opciones.filter(o => o.tipo === 'PRESA');
+            const guarniciones = d.opciones.filter(o => o.tipo === 'GUARNICION');
+            let html = '<div class="mt-2">';
+            if (presas.length > 0) {
+                html += `<select class="form-select form-select-sm mb-1" style="max-width: 220px;" onchange="elegirPresa(${idx}, this.value)">
+                            <option value="">-- Elija la presa --</option>
+                            ${presas.map(o => `<option value="${o.id}" ${d.presa === o.id ? 'selected' : ''}>${escaparHtml(o.insumo)}</option>`).join('')}
+                         </select>`;
+            }
+            guarniciones.forEach(o => {
+                const marcado = (d.guarniciones || []).indexOf(o.id) >= 0;
+                html += `<label class="form-check form-check-inline small mb-0">
+                            <input type="checkbox" class="form-check-input" ${marcado ? 'checked' : ''}
+                                   onchange="marcarGuarnicion(${idx}, ${o.id}, this.checked)" />
+                            ${escaparHtml(o.insumo)} (${parseFloat(o.cantidad)} ${escaparHtml(o.abreviatura)})
+                         </label>`;
+            });
+            return html + '</div>';
+        }
+
         function agregarProducto(p) {
+            $.post('@Url.Action("ObtenerOpcionesProducto", "Venta")', { idProducto: p.id }, function (res) {
+                agregarProductoConOpciones(p, (res && res.success) ? res.opciones : []);
+            }).fail(function () {
+                agregarProductoConOpciones(p, []);
+            });
+        }
+
+        function agregarProductoConOpciones(p, opciones) {
+            // Un producto con presa o guarniciones puede repetirse en otra línea con otra elección
             const existe = detalles.some(d => d.IdProducto === p.id);
-            if (existe) {
+            if (existe && opciones.length === 0) {
                 alert('Este producto ya está en la comanda. Puede modificar su cantidad.');
                 $('#buscadorProducto').val('');
                 $('#resultadosBusqueda').hide();
@@ -288,7 +345,10 @@
                 precioUnitario: p.precio,
                 stockDisponible: p.stock,
                 cantidad: 1,
-                subtotal: p.precio
+                subtotal: p.precio,
+                opciones: opciones,
+                presa: null,
+                guarniciones: opciones.filter(o => o.tipo === 'GUARNICION').map(o => o.id)
             };
 
             detalles.push(nuevoDetalle);
@@ -321,6 +381,7 @@
                         <td class="ps-4">
                             <strong>${d.nombre}</strong>
                             ${d.descripcion ? `<br/><small class="text-muted">${d.descripcion}</small>` : ''}
+                            ${renderizarOpciones(d, idx)}
                         </td>
                         <td class="text-center">
                             <input type="number" class="form-control form-control-sm text-center mx-auto"
@@ -389,7 +450,8 @@
                 IdProducto: d.IdProducto,
                 cantidad: d.cantidad,
                 precioUnitario: d.precioUnitario,
-                subtotal: d.subtotal
+                subtotal: d.subtotal,
+                opciones: opcionesTexto(d)
             }));
 
             $.ajax({
@@ -457,11 +519,19 @@
                 return false;
             }
 
+            const sinPresa = detalles.find(d => tienePresas(d) && !d.presa);
+            if (sinPresa) {
+                e.preventDefault();
+                alert('Elija la presa para: ' + sinPresa.nombre);
+                return false;
+            }
+
             const dataFinal = detalles.map(d => ({
                 IdProducto: d.IdProducto,
                 cantidad: d.cantidad,
                 precioUnitario: d.precioUnitario,
-                subtotal: d.subtotal
+                subtotal: d.subtotal,
+                opciones: opcionesTexto(d)
             }));
 
             $('#detallesJson').val(JSON.stringify(dataFinal));

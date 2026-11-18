@@ -132,25 +132,19 @@
 
 @section JavaScript {
     <script>
-        // Misma regla que sp_Venta_RegistrarConStock: en insumos en kg o lts, 1 o más se toma como gr o ml.
+        // La receta se descuenta tal cual, en la unidad del insumo (gr, ml, Un.).
         function describirConsumo(textoInsumo, cantidad) {
             if (isNaN(cantidad) || cantidad <= 0) return '';
             var partes = (textoInsumo || '').split(' - ');
             var abrev = partes.length > 1 ? partes[partes.length - 1].trim() : '';
-            var a = abrev.toLowerCase();
-            if ((a === 'kg' || a === 'lts') && cantidad >= 1) {
-                return cantidad + ' ' + (a === 'kg' ? 'gr' : 'ml') + ' = ' + parseFloat((cantidad / 1000).toFixed(4)) + ' ' + abrev;
-            }
             return cantidad + ' ' + abrev;
         }
 
         function mostrarAyudaConsumo(textoInsumo, cantidad, helper) {
             var a = ((textoInsumo || '').split(' - ').pop() || '').trim().toLowerCase();
             var html = '';
-            if (a === 'kg' || a === 'lts') {
-                var menor = a === 'kg' ? 'gramos' : 'mililitros';
-                html = '<i class="fas fa-info-circle text-primary"></i> Ingrese en <strong>' + menor + '</strong> (ej: <em>120</em>) o en ' + a +
-                    ' si es menos de 1 (ej: <em>0.12</em>). Un valor de 1 o más se toma como ' + menor + ' (1 ' + a + ' = 1000).';
+            if (a) {
+                html = '<i class="fas fa-info-circle text-primary"></i> Ingrese la cantidad por plato en la unidad del insumo (<strong>' + a + '</strong>), por ejemplo 150 gr de arroz, 100 ml de aceite o 1 presa.';
             }
             var consumo = describirConsumo(textoInsumo, cantidad);
             if (consumo) {

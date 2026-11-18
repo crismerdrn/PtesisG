@@ -413,29 +413,34 @@ namespace CapaDatos
 
 
                     string query = @"
-            -- Productos elaborados: porciones que alcanzan con el stock de insumos de la pollería,
-            -- usando la misma conversión de medidas que sp_Venta_ValidarStock.
+            -- Productos elaborados: porciones que alcanzan con el stock de insumos de la pollería.
+            -- Receta en la unidad del insumo; las guarniciones son opcionales y la presa a elegir
+            -- limita según la presa con más stock.
             WITH Receta AS (
                 SELECT
                     ip.PRODUCTO_id_producto AS IdProducto,
-                    ISNULL(si.stock_actual, 0) /
-                        NULLIF(ip.cantidad_requerida *
-                            CASE
-                                WHEN m.FactorConversion = 1.0 AND ip.cantidad_requerida >= 1.0 AND LOWER(m.Abreviatura) IN ('kg', 'lts')
-                                    THEN 0.001
-                                ELSE ISNULL(m.FactorConversion, 1.0)
-                            END, 0) AS Porciones
+                    ip.tipo_consumo AS Tipo,
+                    ISNULL(si.stock_actual, 0) / NULLIF(ip.cantidad_requerida, 0) AS Porciones
                 FROM INSUMO_PRODUCTO ip
-                INNER JOIN INSUMO i ON ip.INSUMO_id_insumo = i.id_insumo
-                INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida
                 LEFT JOIN STOCK_INSUMO si ON si.INSUMO_id_insumo = ip.INSUMO_id_insumo AND si.POLLERIA_id_polleria = @IdPolleria
-                WHERE ip.estado = 1
+                WHERE ip.estado = 1 AND ip.tipo_consumo IN ('FIJO', 'PRESA')
+            ),
+            Limites AS (
+                SELECT IdProducto, Porciones FROM Receta WHERE Tipo = 'FIJO'
+                UNION ALL
+                SELECT IdProducto, MAX(Porciones) FROM Receta WHERE Tipo = 'PRESA' GROUP BY IdProducto
             ),
             Elaborados AS (
                 SELECT IdProducto,
                        CASE WHEN MIN(ISNULL(Porciones, 0)) < 0 THEN 0 ELSE FLOOR(MIN(ISNULL(Porciones, 0))) END AS Porciones
-                FROM Receta
+                FROM Limites
                 GROUP BY IdProducto
+                UNION
+                SELECT DISTINCT ip.PRODUCTO_id_producto, 999999
+                FROM INSUMO_PRODUCTO ip
+                WHERE ip.estado = 1
+                  AND NOT EXISTS (SELECT 1 FROM INSUMO_PRODUCTO x WHERE x.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
+                                  AND x.estado = 1 AND x.tipo_consumo IN ('FIJO', 'PRESA'))
             ),
             Base AS (
                 SELECT
@@ -792,6 +797,14 @@ namespace CapaDatos
 
         #region Métodos Auxiliares
 
+        // Opciones con solo ids numéricos; sin opciones no se envía el atributo (se descuentan todas las guarniciones)
+        private static string AtributoOpciones(string opciones)
+        {
+            if (opciones == null) return "";
+            var ids = opciones.Split(',').Select(o => o.Trim()).Where(o => o.Length > 0 && o.All(char.IsDigit));
+            return $" Opciones=\"{string.Join(",", ids)}\"";
+        }
+
         private string GenerarXMLDetallesStock(List<CMDetalleVenta> detalles)
         {
             try
@@ -813,7 +826,9 @@ namespace CapaDatos
                     xml.Append($"IdProducto=\"{d.PRODUCTO_id_producto}\" ");
                     xml.Append($"Cantidad=\"{cant}\" ");
                     xml.Append($"PrecioUnitario=\"{prec}\" ");
-                    xml.Append($"Subtotal=\"{sub}\" />");
+                    xml.Append($"Subtotal=\"{sub}\"");
+                    xml.Append(AtributoOpciones(d.Opciones));
+                    xml.Append(" />");
                 }
 
                 xml.Append("</Detalles>");
@@ -849,9 +864,9 @@ namespace CapaDatos
 
                     xml.Append($"Cantidad='{detalle.cantidad}' ");
 
-                    xml.Append($"PrecioUnitario='{detalle.precio_unitario}' ");
-
-                    xml.Append($"/>");
+                    xml.Append($"PrecioUnitario='{detalle.precio_unitario}'");
+                    xml.Append(AtributoOpciones(detalle.Opciones));
+                    xml.Append(" />");
 
                 }
 

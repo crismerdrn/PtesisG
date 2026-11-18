@@ -2050,3 +2050,1225 @@ BEGIN
     END CATCH
 END;
 GO
+
+-- ============================================================================
+-- Recetas con guarniciones a elección y presa a elegir.
+-- INSUMO_PRODUCTO.tipo_consumo: FIJO (siempre), GUARNICION (solo si se marca al vender),
+-- PRESA (se elige exactamente una al vender). Las cantidades de receta están en la
+-- unidad del insumo (gr, ml, Un.) y se descuentan tal cual: receta × cantidad vendida.
+-- ============================================================================
+IF COL_LENGTH('dbo.INSUMO_PRODUCTO', 'tipo_consumo') IS NULL
+    ALTER TABLE dbo.INSUMO_PRODUCTO ADD tipo_consumo VARCHAR(20) NOT NULL
+        CONSTRAINT DF_INSUMO_PRODUCTO_tipo_consumo DEFAULT 'FIJO'
+        CONSTRAINT CK_INSUMO_PRODUCTO_tipo_consumo CHECK (tipo_consumo IN ('FIJO', 'GUARNICION', 'PRESA'));
+GO
+
+IF OBJECT_ID('dbo.DETALLE_VENTA_OPCION', 'U') IS NULL
+    CREATE TABLE dbo.DETALLE_VENTA_OPCION (
+        id_detalle_venta_opcion INT IDENTITY(1,1) PRIMARY KEY,
+        DETALLE_VENTAS_id_detalleVenta INT NOT NULL
+            CONSTRAINT FK_DETALLE_VENTA_OPCION_DETALLE REFERENCES dbo.DETALLE_VENTAS(id_detalleVenta),
+        INSUMO_PRODUCTO_id_insumo_producto INT NOT NULL
+            CONSTRAINT FK_DETALLE_VENTA_OPCION_INSUMO_PRODUCTO REFERENCES dbo.INSUMO_PRODUCTO(id_insumo_producto)
+    );
+GO
+
+-- Insumos que consume una línea de venta. @Opciones = ids de INSUMO_PRODUCTO marcados
+-- (guarniciones y presa) separados por coma; NULL = todas las guarniciones (compatibilidad).
+CREATE OR ALTER FUNCTION dbo.fn_Venta_ConsumoLinea (@IdProducto INT, @Cantidad DECIMAL(12,4), @Opciones VARCHAR(MAX))
+RETURNS TABLE
+AS
+RETURN
+    SELECT ip.id_insumo_producto, ip.INSUMO_id_insumo AS IdInsumo,
+           CAST(ip.cantidad_requerida * @Cantidad AS DECIMAL(12,4)) AS CantidadInsumo
+    FROM dbo.INSUMO_PRODUCTO ip
+    WHERE ip.PRODUCTO_id_producto = @IdProducto
+      AND ip.estado = 1
+      AND (ip.tipo_consumo = 'FIJO'
+           OR (ip.tipo_consumo = 'GUARNICION' AND (@Opciones IS NULL OR ip.id_insumo_producto IN
+                (SELECT TRY_CAST(value AS INT) FROM STRING_SPLIT(@Opciones, ','))))
+           OR (ip.tipo_consumo = 'PRESA' AND ip.id_insumo_producto IN
+                (SELECT TRY_CAST(value AS INT) FROM STRING_SPLIT(ISNULL(@Opciones, ''), ','))));
+GO
+
+-- Mensaje de error si las opciones elegidas no son válidas para el producto; NULL si están bien.
+CREATE OR ALTER FUNCTION dbo.fn_Venta_ErrorOpciones (@IdProducto INT, @Opciones VARCHAR(MAX))
+RETURNS VARCHAR(300)
+AS
+BEGIN
+    DECLARE @Elegidas TABLE (Id INT);
+
+    INSERT INTO @Elegidas (Id)
+    SELECT DISTINCT TRY_CAST(value AS INT)
+    FROM STRING_SPLIT(ISNULL(@Opciones, ''), ',')
+    WHERE LTRIM(RTRIM(value)) <> '';
+
+    IF EXISTS (SELECT 1 FROM @Elegidas e
+               WHERE e.Id IS NULL OR NOT EXISTS (
+                   SELECT 1 FROM dbo.INSUMO_PRODUCTO ip
+                   WHERE ip.id_insumo_producto = e.Id AND ip.PRODUCTO_id_producto = @IdProducto
+                     AND ip.estado = 1 AND ip.tipo_consumo IN ('GUARNICION', 'PRESA')))
+        RETURN 'opción no válida para el producto';
+
+    IF EXISTS (SELECT 1 FROM dbo.INSUMO_PRODUCTO WHERE PRODUCTO_id_producto = @IdProducto AND estado = 1 AND tipo_consumo = 'PRESA')
+       AND (SELECT COUNT(*) FROM @Elegidas e INNER JOIN dbo.INSUMO_PRODUCTO ip
+            ON ip.id_insumo_producto = e.Id AND ip.tipo_consumo = 'PRESA') <> 1
+        RETURN 'debe elegir una presa';
+
+    RETURN NULL;
+END
+GO
+
+-- Venta: consumo = receta × cantidad, con guarniciones y presa elegidas (atributo Opciones).
+CREATE OR ALTER PROCEDURE [dbo].[sp_Venta_ValidarStock]
+    @IdPolleria INT,
+    @Detalles XML,
+    @StockSuficiente BIT OUTPUT,
+    @Mensaje VARCHAR(1000) OUTPUT,
+    @DetallesValidados XML OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @StockSuficiente = 1;
+    SET @Mensaje = '';
+
+    DECLARE @DetallesTemp TABLE (
+        IdProducto INT,
+        Cantidad DECIMAL(10,2),
+        Opciones VARCHAR(MAX) NULL
+    );
+
+    -- Producto pedido (sumado si se repite en varias líneas)
+    DECLARE @Pedido TABLE (
+        IdProducto INT PRIMARY KEY,
+        Cantidad DECIMAL(12,2),
+        EsElaborado BIT
+    );
+
+    -- Consumo total del carrito por insumo, en la unidad de stock del insumo
+    DECLARE @Consumo TABLE (
+        IdInsumo INT PRIMARY KEY,
+        NombreInsumo VARCHAR(250),
+        Abreviatura VARCHAR(20),
+        Requerido DECIMAL(18,4),
+        Disponible DECIMAL(12,4)
+    );
+
+    DECLARE @Resultados TABLE (
+        IdProducto INT,
+        NombreProducto VARCHAR(250),
+        CantidadSolicitada DECIMAL(12,2),
+        StockActual DECIMAL(12,4),
+        StockMinimo DECIMAL(12,4),
+        Suficiente BIT,
+        Mensaje VARCHAR(500)
+    );
+
+    -- Parsear XML (compatible con atributos y elementos)
+    INSERT INTO @DetallesTemp (IdProducto, Cantidad, Opciones)
+    SELECT
+        T.Item.value('@IdProducto', 'INT'),
+        T.Item.value('@Cantidad', 'DECIMAL(10,2)'),
+        T.Item.value('@Opciones', 'VARCHAR(MAX)')
+    FROM @Detalles.nodes('//Detalle') AS T(Item)
+    UNION ALL
+    SELECT
+        T.Item.value('(IdProducto)[1]', 'INT'),
+        T.Item.value('(Cantidad)[1]', 'DECIMAL(10,2)'),
+        T.Item.value('(Opciones)[1]', 'VARCHAR(MAX)')
+    FROM @Detalles.nodes('//DetalleVentaStockXML') AS T(Item);
+
+    INSERT INTO @Pedido (IdProducto, Cantidad, EsElaborado)
+    SELECT
+        d.IdProducto,
+        SUM(d.Cantidad),
+        CASE WHEN EXISTS (SELECT 1 FROM INSUMO_PRODUCTO ip WHERE ip.PRODUCTO_id_producto = d.IdProducto AND ip.estado = 1)
+             THEN 1 ELSE 0 END
+    FROM @DetallesTemp d
+    GROUP BY d.IdProducto;
+
+    -- Mismo cálculo que sp_Venta_RegistrarConStock: receta × cantidad, solo guarniciones/presa elegidas
+    INSERT INTO @Consumo (IdInsumo, NombreInsumo, Abreviatura, Requerido, Disponible)
+    SELECT
+        i.id_insumo,
+        i.nombre,
+        ISNULL(m.Abreviatura, ''),
+        SUM(c.CantidadInsumo),
+        MAX(ISNULL(si.stock_actual, 0))
+    FROM @DetallesTemp d
+    CROSS APPLY dbo.fn_Venta_ConsumoLinea(d.IdProducto, d.Cantidad, d.Opciones) c
+    INNER JOIN INSUMO i ON c.IdInsumo = i.id_insumo
+    INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida
+    LEFT JOIN STOCK_INSUMO si ON si.INSUMO_id_insumo = i.id_insumo AND si.POLLERIA_id_polleria = @IdPolleria
+    GROUP BY i.id_insumo, i.nombre, m.Abreviatura;
+
+    INSERT INTO @Resultados (IdProducto, NombreProducto, CantidadSolicitada, StockActual, StockMinimo, Suficiente, Mensaje)
+    SELECT
+        p.IdProducto,
+        pr.Nombre,
+        p.Cantidad,
+        CASE WHEN p.EsElaborado = 1 THEN ISNULL(f.Disponible, 9999) ELSE ISNULL(s.stock_actual, 0) END,
+        CASE WHEN p.EsElaborado = 1 THEN 0 ELSE ISNULL(s.stock_minimo, 0) END,
+        CASE
+            WHEN p.EsElaborado = 1 THEN CASE WHEN f.IdInsumo IS NULL THEN 1 ELSE 0 END
+            ELSE CASE WHEN ISNULL(s.stock_actual, 0) >= p.Cantidad THEN 1 ELSE 0 END
+        END,
+        CASE
+            WHEN p.EsElaborado = 1 AND f.IdInsumo IS NULL THEN 'Insumos suficientes para preparar'
+            WHEN p.EsElaborado = 1 THEN
+                'Falta insumo: ' + f.NombreInsumo
+                + ' (Disp: ' + FORMAT(f.Disponible, '0.####') + ' ' + f.Abreviatura
+                + ', Req: ' + FORMAT(f.Requerido, '0.####') + ' ' + f.Abreviatura + ')'
+            WHEN ISNULL(s.stock_actual, 0) >= p.Cantidad THEN 'Stock suficiente'
+            ELSE 'Stock insuficiente. Disponible: ' + FORMAT(ISNULL(s.stock_actual, 0), '0.##')
+        END
+    FROM @Pedido p
+    LEFT JOIN PRODUCTO pr ON pr.id_producto = p.IdProducto
+    LEFT JOIN STOCK s ON s.PRODUCTO_id_producto = p.IdProducto AND s.POLLERIA_id_polleria = @IdPolleria
+    OUTER APPLY (
+        SELECT TOP 1 c.IdInsumo, c.NombreInsumo, c.Abreviatura, c.Requerido, c.Disponible
+        FROM @Consumo c
+        INNER JOIN INSUMO_PRODUCTO ip ON ip.INSUMO_id_insumo = c.IdInsumo
+            AND ip.PRODUCTO_id_producto = p.IdProducto AND ip.estado = 1
+        WHERE c.Disponible < c.Requerido
+        ORDER BY c.Disponible - c.Requerido
+    ) f;
+
+    INSERT INTO @Resultados (IdProducto, NombreProducto, CantidadSolicitada, StockActual, StockMinimo, Suficiente, Mensaje)
+    SELECT d.IdProducto, pr.Nombre, d.Cantidad, 0, 0, 0, e.Error
+    FROM @DetallesTemp d
+    LEFT JOIN PRODUCTO pr ON pr.id_producto = d.IdProducto
+    CROSS APPLY (SELECT dbo.fn_Venta_ErrorOpciones(d.IdProducto, d.Opciones) AS Error) e
+    WHERE d.Opciones IS NOT NULL AND e.Error IS NOT NULL
+       OR d.Opciones IS NULL AND EXISTS (SELECT 1 FROM INSUMO_PRODUCTO ip WHERE ip.PRODUCTO_id_producto = d.IdProducto AND ip.estado = 1 AND ip.tipo_consumo = 'PRESA') AND e.Error IS NOT NULL;
+
+    IF EXISTS (SELECT 1 FROM @Resultados WHERE Suficiente = 0)
+    BEGIN
+        SET @StockSuficiente = 0;
+
+        SELECT @Mensaje = LEFT(STRING_AGG(
+            CAST(ISNULL(NombreProducto, '') + ': ' + Mensaje AS VARCHAR(MAX)),
+            CHAR(10)
+        ), 1000)
+        FROM @Resultados
+        WHERE Suficiente = 0;
+    END
+    ELSE
+    BEGIN
+        SET @Mensaje = 'Stock suficiente para todos los productos';
+    END
+
+    SET @DetallesValidados = (
+        SELECT
+            IdProducto AS '@IdProducto',
+            NombreProducto AS '@NombreProducto',
+            CantidadSolicitada AS '@Cantidad',
+            StockActual AS '@StockActual',
+            StockMinimo AS '@StockMinimo',
+            Suficiente AS '@Suficiente',
+            Mensaje AS '@MensajeValidacion'
+        FROM @Resultados
+        FOR XML PATH('Detalle'), ROOT('DetallesValidados')
+    );
+END;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_Venta_RegistrarConStock]
+    @IdUsuario INT,
+    @IdCliente INT = NULL,
+    @IdPolleria INT,
+    @TipoVenta VARCHAR(50) = 'EFECTIVO',
+    @IdTipoVenta INT = 1,
+    @Detalles XML,
+    @Observaciones VARCHAR(500) = NULL,
+    @Resultado BIT OUTPUT,
+    @Mensaje VARCHAR(500) OUTPUT,
+    @IdVentaGenerada INT OUTPUT,
+    @NumeroVenta VARCHAR(100) OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SET @Resultado = 0;
+    SET @IdVentaGenerada = 0;
+    SET @NumeroVenta = '';
+    SET @Mensaje = '';
+
+    DECLARE @TotalVenta DECIMAL(10,2) = 0;
+    DECLARE @Contador INT;
+    DECLARE @IdTipoPago INT;
+    DECLARE @ClienteFinal INT;
+
+    DECLARE @DetallesTemp TABLE (
+        RowIndex INT IDENTITY(1,1),
+        IdProducto INT,
+        Cantidad DECIMAL(10,2),
+        PrecioUnitario DECIMAL(10,2),
+        Subtotal DECIMAL(10,2),
+        Opciones VARCHAR(MAX) NULL
+    );
+
+    BEGIN TRY
+        -- 1. Validaciones de existencia
+        IF NOT EXISTS (SELECT 1 FROM USUARIOS WHERE id_usuario = @IdUsuario AND estado = 1)
+        BEGIN
+            SET @Mensaje = 'Usuario no válido o inactivo.';
+            RETURN;
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM POLLERIA WHERE id_polleria = @IdPolleria AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'Pollería no válida o inactiva.';
+            RETURN;
+        END
+
+        -- 2. Resolver Cliente
+        IF @IdCliente IS NULL OR @IdCliente = 0
+        BEGIN
+            SELECT TOP 1 @ClienteFinal = id_cliente
+            FROM CLIENTE
+            WHERE UPPER(LTRIM(RTRIM(Nombre))) = 'GENERAL' AND UPPER(LTRIM(RTRIM(Apellido))) = 'GENERAL';
+
+            IF @ClienteFinal IS NULL
+            BEGIN
+                INSERT INTO CLIENTE (Nombre, Apellido, Telefono, Direccion, Email, Estado, Fecha_Registro)
+                VALUES ('GENERAL', 'GENERAL', '0000000', 'N/A', 'cliente@general.com', 1, GETDATE());
+
+                SET @ClienteFinal = SCOPE_IDENTITY();
+            END
+        END
+        ELSE
+        BEGIN
+            SET @ClienteFinal = @IdCliente;
+            IF NOT EXISTS (SELECT 1 FROM CLIENTE WHERE id_cliente = @IdCliente AND Estado = 1)
+            BEGIN
+                SET @Mensaje = 'El cliente seleccionado no existe o está inactivo.';
+                RETURN;
+            END
+        END
+
+        -- 3. Parsear XML
+        INSERT INTO @DetallesTemp (IdProducto, Cantidad, PrecioUnitario, Subtotal, Opciones)
+        SELECT
+            T.Item.value('@IdProducto', 'INT'),
+            T.Item.value('@Cantidad', 'DECIMAL(10,2)'),
+            T.Item.value('@PrecioUnitario', 'DECIMAL(10,2)'),
+            T.Item.value('@Subtotal', 'DECIMAL(10,2)'),
+            T.Item.value('@Opciones', 'VARCHAR(MAX)')
+        FROM @Detalles.nodes('//Detalle') AS T(Item)
+        UNION ALL
+        SELECT
+            T.Item.value('(IdProducto)[1]', 'INT'),
+            T.Item.value('(Cantidad)[1]', 'DECIMAL(10,2)'),
+            T.Item.value('(PrecioUnitario)[1]', 'DECIMAL(10,2)'),
+            T.Item.value('(Subtotal)[1]', 'DECIMAL(10,2)'),
+            T.Item.value('(Opciones)[1]', 'VARCHAR(MAX)')
+        FROM @Detalles.nodes('//DetalleVentaStockXML') AS T(Item);
+
+        IF NOT EXISTS (SELECT 1 FROM @DetallesTemp)
+        BEGIN
+            SET @Mensaje = 'El XML de detalles no contiene productos válidos o el formato es incorrecto.';
+            RETURN;
+        END
+
+        -- 4. Total Venta
+        SELECT @TotalVenta = SUM(Subtotal) FROM @DetallesTemp;
+
+        IF ISNULL(@TotalVenta, 0) <= 0
+        BEGIN
+            SET @Mensaje = 'El total de la venta debe ser mayor a 0.';
+            RETURN;
+        END
+
+        -- 5. Resolver Medio de Pago
+        IF ISNUMERIC(@TipoVenta) = 1
+        BEGIN
+            SELECT @IdTipoPago = id_tipoPago FROM TIPO_PAGO WHERE id_tipoPago = CAST(@TipoVenta AS INT) AND Estado = 1;
+        END
+        ELSE
+        BEGIN
+            SELECT @IdTipoPago = id_tipoPago FROM TIPO_PAGO WHERE UPPER(nombre) = UPPER(LTRIM(RTRIM(@TipoVenta))) AND Estado = 1;
+        END
+
+        IF @IdTipoPago IS NULL
+            SET @IdTipoPago = 1;
+
+        -- INICIO CONTROL TRANSACCIONAL
+        BEGIN TRANSACTION;
+
+        -- 6. Validar Stock
+        DECLARE @StockOk BIT = 1;
+        DECLARE @MsgStock VARCHAR(1000) = '';
+        DECLARE @XmlOut XML;
+
+        EXEC dbo.sp_Venta_ValidarStock
+            @IdPolleria = @IdPolleria,
+            @Detalles = @Detalles,
+            @StockSuficiente = @StockOk OUTPUT,
+            @Mensaje = @MsgStock OUTPUT,
+            @DetallesValidados = @XmlOut OUTPUT;
+
+        IF @StockOk = 0
+        BEGIN
+            ROLLBACK TRANSACTION;
+            SET @Mensaje = 'Stock insuficiente: ' + @MsgStock;
+            RETURN;
+        END
+
+        -- 7. Correlativo Seguro
+        SELECT @Contador = ISNULL(MAX(TRY_CAST(SUBSTRING(NumeroVenta, 3, 50) AS INT)), 0) + 1
+        FROM VENTAS WITH (UPDLOCK, HOLDLOCK)
+        WHERE YEAR(Fecha_venta) = YEAR(GETDATE());
+
+        SET @NumeroVenta = 'VT' + RIGHT('000000' + CAST(@Contador AS VARCHAR(6)), 6);
+
+        -- 8. Cabecera Venta
+        INSERT INTO VENTAS (
+            NumeroVenta, Total_venta, Fecha_venta, hora_venta, Estado, Tipo_venta,
+            USUARIOS_id_usuario, CLIENTE_id_cliente, POLLERIA_id_polleria,
+            TIPO_VENTA_id_tipoVenta
+        ) VALUES (
+            @NumeroVenta, @TotalVenta, CAST(GETDATE() AS DATE), CONVERT(TIME, GETDATE()), 'COMPLETADA',
+            @TipoVenta, @IdUsuario, @ClienteFinal, @IdPolleria,
+            ISNULL(@IdTipoVenta, 1)
+        );
+
+        SET @IdVentaGenerada = SCOPE_IDENTITY();
+
+        -- 9. Detalles Venta: se insertan por línea (paso 10) para guardar las opciones elegidas
+
+        -- 10. Descuento de Stock Normalizado y Kardex
+        DECLARE @TotalItems INT = (SELECT COUNT(*) FROM @DetallesTemp);
+        DECLARE @Idx INT = 1;
+        DECLARE @IdP INT, @CantP DECIMAL(10,2), @OpcP VARCHAR(MAX), @IdDetalleVenta INT;
+
+        WHILE @Idx <= @TotalItems
+        BEGIN
+            SELECT @IdP = IdProducto, @CantP = Cantidad, @OpcP = Opciones
+            FROM @DetallesTemp WHERE RowIndex = @Idx;
+
+            INSERT INTO DETALLE_VENTAS (cantidad, precio_unitario, subtotal, VENTAS_id_venta, PRODUCTO_id_producto)
+            SELECT Cantidad, PrecioUnitario, Subtotal, @IdVentaGenerada, IdProducto
+            FROM @DetallesTemp WHERE RowIndex = @Idx;
+            SET @IdDetalleVenta = SCOPE_IDENTITY();
+
+            INSERT INTO DETALLE_VENTA_OPCION (DETALLE_VENTAS_id_detalleVenta, INSUMO_PRODUCTO_id_insumo_producto)
+            SELECT @IdDetalleVenta, ip.id_insumo_producto
+            FROM INSUMO_PRODUCTO ip
+            WHERE ip.PRODUCTO_id_producto = @IdP AND ip.tipo_consumo IN ('GUARNICION', 'PRESA')
+              AND ip.id_insumo_producto IN (SELECT TRY_CAST(value AS INT) FROM STRING_SPLIT(ISNULL(@OpcP, ''), ','));
+
+            IF EXISTS (SELECT 1 FROM INSUMO_PRODUCTO WHERE PRODUCTO_id_producto = @IdP AND estado = 1)
+            BEGIN
+                -- Descontar insumos con factor de conversión
+                DECLARE @CursorInsumos CURSOR;
+                DECLARE @IdIns INT, @CantReq DECIMAL(10,4), @TotalDescontar DECIMAL(10,4);
+                DECLARE @Factor DECIMAL(18,6);
+                DECLARE @AbrevIns VARCHAR(20);
+                DECLARE @StockAntIns DECIMAL(12,4);
+
+                SET @CursorInsumos = CURSOR LOCAL FAST_FORWARD FOR
+                    SELECT
+                        ip.INSUMO_id_insumo,
+                        ip.cantidad_requerida,
+                        1.0,
+                        ISNULL(m.Abreviatura, '')
+                    FROM dbo.fn_Venta_ConsumoLinea(@IdP, @CantP, @OpcP) c
+                    INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = c.id_insumo_producto
+                    INNER JOIN INSUMO i ON ip.INSUMO_id_insumo = i.id_insumo
+                    INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida;
+
+                OPEN @CursorInsumos;
+                FETCH NEXT FROM @CursorInsumos INTO @IdIns, @CantReq, @Factor, @AbrevIns;
+
+                WHILE @@FETCH_STATUS = 0
+                BEGIN
+                    -- Descuento proporcional a la unidad de almacenamiento
+                    SET @TotalDescontar = CAST((@CantReq * @Factor * @CantP) AS DECIMAL(10,4));
+
+                    SELECT @StockAntIns = ISNULL(stock_actual, 0)
+                    FROM STOCK_INSUMO WITH (UPDLOCK, ROWLOCK)
+                    WHERE INSUMO_id_insumo = @IdIns AND POLLERIA_id_polleria = @IdPolleria;
+
+                    -- Si no existía fila en esa pollería, se inicializa
+                    IF @StockAntIns IS NULL
+                    BEGIN
+                        SET @StockAntIns = 0;
+                        INSERT INTO STOCK_INSUMO (stock_actual, stock_minimo, INSUMO_id_insumo, POLLERIA_id_polleria, Fecha_ultimo_movimiento)
+                        VALUES (0, 0, @IdIns, @IdPolleria, GETDATE());
+                    END
+
+                    UPDATE STOCK_INSUMO
+                    SET stock_actual = stock_actual - @TotalDescontar,
+                        Fecha_ultimo_movimiento = GETDATE()
+                    WHERE INSUMO_id_insumo = @IdIns AND POLLERIA_id_polleria = @IdPolleria;
+
+                    INSERT INTO MOVIMIENTOS_STOCK (
+                        fecha_movimiento, tipo_movimiento, id_referencia, tipo_referencia,
+                        id_item, tipo_item, cantidad, stock_anterior, stock_nuevo,
+                        id_polleria, id_usuario, observaciones, fecha_registro
+                    ) VALUES (
+                        GETDATE(), 'VENTA', @IdVentaGenerada, 'VENTA',
+                        @IdIns, 'INSUMO', -@TotalDescontar, @StockAntIns, (@StockAntIns - @TotalDescontar),
+                        @IdPolleria, @IdUsuario, 'Consumo venta ' + @NumeroVenta, GETDATE()
+                    );
+
+                    FETCH NEXT FROM @CursorInsumos INTO @IdIns, @CantReq, @Factor, @AbrevIns;
+                END;
+
+                CLOSE @CursorInsumos;
+                DEALLOCATE @CursorInsumos;
+            END
+            ELSE
+            BEGIN
+                -- Descontar producto de reventa directa (sodas, postres)
+                DECLARE @StockAntProd DECIMAL(10,2);
+
+                SELECT @StockAntProd = ISNULL(stock_actual, 0)
+                FROM STOCK WITH (UPDLOCK, ROWLOCK)
+                WHERE PRODUCTO_id_producto = @IdP AND POLLERIA_id_polleria = @IdPolleria;
+
+                UPDATE STOCK
+                SET stock_actual = stock_actual - @CantP,
+                    Fecha_ultimo_movimiento = GETDATE()
+                WHERE PRODUCTO_id_producto = @IdP AND POLLERIA_id_polleria = @IdPolleria;
+
+                INSERT INTO MOVIMIENTOS_STOCK (
+                    fecha_movimiento, tipo_movimiento, id_referencia, tipo_referencia,
+                    id_item, tipo_item, cantidad, stock_anterior, stock_nuevo,
+                    id_polleria, id_usuario, observaciones, fecha_registro
+                ) VALUES (
+                    GETDATE(), 'VENTA', @IdVentaGenerada, 'VENTA',
+                    @IdP, 'PRODUCTO', -@CantP, @StockAntProd, (@StockAntProd - @CantP),
+                    @IdPolleria, @IdUsuario, ISNULL(@Observaciones, 'Venta ' + @NumeroVenta), GETDATE()
+                );
+            END;
+
+            SET @Idx = @Idx + 1;
+        END;
+
+        -- 11. Pago
+        INSERT INTO PAGO_VENTAS (
+            monto, fecha_pago, estado, VENTAS_id_venta, TIPO_PAGO_id_tipoPago
+        ) VALUES (
+            @TotalVenta, GETDATE(), 1, @IdVentaGenerada, @IdTipoPago
+        );
+
+        COMMIT TRANSACTION;
+
+        SET @Resultado = 1;
+        SET @Mensaje = 'Venta registrada exitosamente. N°: ' + @NumeroVenta;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SET @Resultado = 0;
+        SET @IdVentaGenerada = 0;
+        SET @NumeroVenta = '';
+        SET @Mensaje = 'Error al registrar venta: ' + ERROR_MESSAGE();
+    END CATCH
+END;
+GO
+
+-- Costo y producción: receta en la unidad del insumo, sin factores de conversión.
+CREATE OR ALTER PROCEDURE [dbo].[sp_InsumoProducto_CalcularCostoProduccion]
+    @IdProducto INT,
+    @IdPolleria INT = NULL
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @PrecioVenta DECIMAL(10,2),
+            @NombreProducto NVARCHAR(200),
+            @CostoTotal DECIMAL(10,2) = 0,
+            @TotalInsumos INT = 0,
+            @UnidadesMaximasProducibles INT = NULL;
+
+    -- 1. Obtener producto
+    SELECT
+        @PrecioVenta = p.PrecioVenta,
+        @NombreProducto = p.Nombre
+    FROM PRODUCTO p
+    WHERE p.id_producto = @IdProducto
+        AND p.Estado = 1;
+
+    IF @NombreProducto IS NULL
+    BEGIN
+        SELECT TOP 0 * FROM (
+            SELECT
+                0 AS id_insumo_producto, '' AS NombreInsumo, 0.00 AS cantidad_requerida,
+                '' AS MedidaInsumo, '' AS AbreviaturaMedida, 0.00 AS UltimoPrecioCompra,
+                0.00 AS PrecioPromedio3Meses, 0.00 AS CostoInsumo, 0.00 AS StockActual, 0 AS UnidadesProducibles
+        ) AS EmptyResult;
+
+        SELECT
+            @IdProducto AS IdProducto, 'Producto no encontrado' AS NombreProducto,
+            0.00 AS PrecioVenta, 0.00 AS CostoTotalProduccion, 0.00 AS GananciaUnitaria,
+            0.00 AS PorcentajeMargen, 0 AS TotalInsumos, NULL AS UnidadesMaximasProducibles;
+        RETURN;
+    END
+
+    CREATE TABLE #DetallesCosto (
+        id_insumo_producto INT,
+        NombreInsumo NVARCHAR(200),
+        cantidad_requerida DECIMAL(10,4),
+        MedidaInsumo NVARCHAR(50),
+        AbreviaturaMedida NVARCHAR(20),
+        UltimoPrecioCompra DECIMAL(10,2),
+        PrecioPromedio3Meses DECIMAL(10,2),
+        CostoInsumo DECIMAL(10,2),
+        StockActual DECIMAL(12,4),
+        UnidadesProducibles INT
+    );
+
+    INSERT INTO #DetallesCosto
+    SELECT
+        ip.id_insumo_producto,
+        i.nombre AS NombreInsumo,
+        ip.cantidad_requerida,
+        m.Descripcion AS MedidaInsumo,
+        m.Abreviatura AS AbreviaturaMedida,
+
+        -- 1. Último precio compra
+        ISNULL((
+            SELECT TOP 1 dc.precioUnitario
+            FROM DETALLE_COMPRA dc
+            INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+            WHERE dc.INSUMO_id_insumo = i.id_insumo
+                AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                AND dc.precioUnitario > 0
+            ORDER BY c.FechaCompra DESC, c.id_compra DESC
+        ), 0) AS UltimoPrecioCompra,
+
+        -- 2. Precio promedio móvil
+        ISNULL((
+            SELECT AVG(dc.precioUnitario)
+            FROM DETALLE_COMPRA dc
+            INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+            WHERE dc.INSUMO_id_insumo = i.id_insumo
+                AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                AND dc.precioUnitario > 0
+                AND c.FechaCompra >= DATEADD(MONTH, -3, GETDATE())
+        ),
+        ISNULL((
+            SELECT TOP 1 dc.precioUnitario
+            FROM DETALLE_COMPRA dc
+            INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+            WHERE dc.INSUMO_id_insumo = i.id_insumo
+                AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                AND dc.precioUnitario > 0
+            ORDER BY c.FechaCompra DESC
+        ), 0)) AS PrecioPromedio3Meses,
+
+        -- 3. Costo del insumo (NORMALIZACIÓN INTELIGENTE)
+        CAST(
+            (
+                ip.cantidad_requerida *
+                CASE
+                    -- Receta en la unidad del insumo. La presa a elegir se promedia entre las opciones.
+                    WHEN ip.tipo_consumo = 'PRESA'
+                        THEN 1.0 / NULLIF((SELECT COUNT(*) FROM INSUMO_PRODUCTO x
+                                           WHERE x.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
+                                             AND x.estado = 1 AND x.tipo_consumo = 'PRESA'), 0)
+                    ELSE 1.0
+                END
+            ) * ISNULL(
+                COALESCE(
+                    (
+                        SELECT AVG(dc.precioUnitario)
+                        FROM DETALLE_COMPRA dc
+                        INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+                        WHERE dc.INSUMO_id_insumo = i.id_insumo
+                            AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                            AND dc.precioUnitario > 0
+                            AND c.FechaCompra >= DATEADD(MONTH, -3, GETDATE())
+                    ),
+                    (
+                        SELECT TOP 1 dc.precioUnitario
+                        FROM DETALLE_COMPRA dc
+                        INNER JOIN COMPRA c ON dc.COMPRA_id_compra = c.id_compra
+                        WHERE dc.INSUMO_id_insumo = i.id_insumo
+                            AND c.Estado IN ('COMPLETADA', 'COMPLETADO')
+                            AND dc.precioUnitario > 0
+                        ORDER BY c.FechaCompra DESC
+                    )
+                ), 0
+            ) AS DECIMAL(10,2)
+        ) AS CostoInsumo,
+
+        -- 4. Stock actual
+        ISNULL((
+            SELECT TOP 1 si.stock_actual
+            FROM STOCK_INSUMO si
+            WHERE si.INSUMO_id_insumo = i.id_insumo
+                AND (@IdPolleria IS NULL OR si.POLLERIA_id_polleria = @IdPolleria)
+            ORDER BY
+                CASE WHEN @IdPolleria IS NOT NULL AND si.POLLERIA_id_polleria = @IdPolleria THEN 1 ELSE 2 END,
+                si.Fecha_ultimo_movimiento DESC
+        ), 0) AS StockActual,
+
+        -- 5. Capacidad de platos producibles
+        CASE
+            WHEN ISNULL((
+                SELECT TOP 1 si.stock_actual
+                FROM STOCK_INSUMO si
+                WHERE si.INSUMO_id_insumo = i.id_insumo
+                    AND (@IdPolleria IS NULL OR si.POLLERIA_id_polleria = @IdPolleria)
+            ), 0) > 0
+            AND ip.cantidad_requerida > 0
+            THEN FLOOR(
+                ISNULL((
+                    SELECT TOP 1 si.stock_actual
+                    FROM STOCK_INSUMO si
+                    WHERE si.INSUMO_id_insumo = i.id_insumo
+                        AND (@IdPolleria IS NULL OR si.POLLERIA_id_polleria = @IdPolleria)
+                ), 0) /
+                (
+                    ip.cantidad_requerida *
+                    1.0
+                )
+            )
+            ELSE 0
+        END AS UnidadesProducibles
+
+    FROM INSUMO_PRODUCTO ip
+    INNER JOIN INSUMO i ON ip.INSUMO_id_insumo = i.id_insumo
+    INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida
+    WHERE ip.PRODUCTO_id_producto = @IdProducto
+        AND ip.estado = 1
+        AND i.estado = 1
+        AND m.Estado = 1;
+
+    -- Totales
+    SELECT
+        @CostoTotal = ISNULL(SUM(CostoInsumo), 0),
+        @TotalInsumos = ISNULL(COUNT(*), 0),
+        @UnidadesMaximasProducibles = ISNULL(MIN(UnidadesProducibles), 0)
+    FROM #DetallesCosto;
+
+    -- Capacidad: las guarniciones son opcionales y de la presa a elegir cuenta la que más rinde
+    IF EXISTS (SELECT 1 FROM #DetallesCosto d INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = d.id_insumo_producto
+               WHERE ip.tipo_consumo IN ('FIJO', 'PRESA'))
+        SELECT @UnidadesMaximasProducibles = ISNULL(MIN(Unidades), 0)
+        FROM (
+            SELECT d.UnidadesProducibles AS Unidades
+            FROM #DetallesCosto d INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = d.id_insumo_producto
+            WHERE ip.tipo_consumo = 'FIJO'
+            UNION ALL
+            SELECT MAX(d.UnidadesProducibles)
+            FROM #DetallesCosto d INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = d.id_insumo_producto
+            WHERE ip.tipo_consumo = 'PRESA'
+            HAVING COUNT(*) > 0
+        ) u;
+
+    IF @TotalInsumos = 0
+    BEGIN
+        SELECT * FROM #DetallesCosto ORDER BY NombreInsumo;
+
+        SELECT
+            @IdProducto AS IdProducto,
+            @NombreProducto AS NombreProducto,
+            ISNULL(@PrecioVenta, 0) AS PrecioVenta,
+            0.00 AS CostoTotalProduccion,
+            ISNULL(@PrecioVenta, 0) AS GananciaUnitaria,
+            100.00 AS PorcentajeMargen,
+            0 AS TotalInsumos,
+            0 AS UnidadesMaximasProducibles;
+    END
+    ELSE
+    BEGIN
+        SELECT * FROM #DetallesCosto ORDER BY CostoInsumo DESC;
+
+        SELECT
+            @IdProducto AS IdProducto,
+            @NombreProducto AS NombreProducto,
+            ISNULL(@PrecioVenta, 0) AS PrecioVenta,
+            @CostoTotal AS CostoTotalProduccion,
+            ISNULL(@PrecioVenta - @CostoTotal, 0) AS GananciaUnitaria,
+            CASE
+                WHEN ISNULL(@PrecioVenta, 0) > 0
+                THEN ((@PrecioVenta - @CostoTotal) / @PrecioVenta) * 100
+                ELSE 0
+            END AS PorcentajeMargen,
+            @TotalInsumos AS TotalInsumos,
+            @UnidadesMaximasProducibles AS UnidadesMaximasProducibles;
+    END
+
+    DROP TABLE #DetallesCosto;
+END;
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_InsumoProducto_ValidarStockProduccion]
+    @IdProducto INT,
+    @CantidadProducir INT,
+    @IdPolleria INT,
+    @Resultado BIT OUTPUT,
+    @Mensaje NVARCHAR(1000) OUTPUT,
+    @UnidadesPosibles INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    -- Variables locales
+    DECLARE @StockSuficiente BIT = 1,
+            @MensajeValidacion NVARCHAR(1000) = '',
+            @UnidadesMaximasProducibles INT = 999999,
+            @InsumoLimitante NVARCHAR(200),
+            @CantidadLimitante INT,
+            @NombreProducto NVARCHAR(200);
+
+    -- Obtener nombre del producto
+    SELECT @NombreProducto = Nombre
+    FROM PRODUCTO
+    WHERE id_producto = @IdProducto;
+
+    -- Crear tabla temporal para resultados
+    CREATE TABLE #ValidacionStock (
+        IdInsumo INT,
+        NombreInsumo NVARCHAR(200),
+        CantidadRequerida DECIMAL(10,4),
+        StockActual DECIMAL(12,4),
+        CantidadNecesaria DECIMAL(12,4),
+        Suficiente BIT,
+        UnidadesPosibles INT
+    );
+
+    -- Obtener insumos del producto y validar stock
+    -- Receta en la unidad del insumo: se descuenta receta × cantidad, igual que la venta.
+    INSERT INTO #ValidacionStock
+    SELECT
+        i.id_insumo,
+        i.nombre AS NombreInsumo,
+        ip.cantidad_requerida,
+        ISNULL(si.stock_actual, 0) AS StockActual,
+        ip.cantidad_requerida * 1.0 * @CantidadProducir AS CantidadNecesaria,
+        CASE
+            WHEN ISNULL(si.stock_actual, 0) >= (ip.cantidad_requerida * 1.0 * @CantidadProducir)
+            THEN 1
+            ELSE 0
+        END AS Suficiente,
+        CASE
+            WHEN ip.cantidad_requerida > 0
+            THEN FLOOR(ISNULL(si.stock_actual, 0) / (ip.cantidad_requerida * 1.0))
+            ELSE 999999
+        END AS UnidadesPosibles
+    FROM INSUMO_PRODUCTO ip
+    INNER JOIN INSUMO i ON ip.INSUMO_id_insumo = i.id_insumo
+    INNER JOIN MEDIDAS m ON i.MEDIDAS_id_medida = m.id_medida
+    LEFT JOIN STOCK_INSUMO si ON i.id_insumo = si.INSUMO_id_insumo
+        AND si.POLLERIA_id_polleria = @IdPolleria
+    WHERE ip.PRODUCTO_id_producto = @IdProducto
+        AND ip.estado = 1
+        AND i.estado = 1
+        -- Las guarniciones son opcionales; de la presa a elegir cuenta la que más rinde
+        AND (ip.tipo_consumo = 'FIJO'
+             OR (ip.tipo_consumo = 'PRESA' AND ip.id_insumo_producto = (
+                    SELECT TOP 1 x.id_insumo_producto
+                    FROM INSUMO_PRODUCTO x
+                    LEFT JOIN STOCK_INSUMO sx ON sx.INSUMO_id_insumo = x.INSUMO_id_insumo
+                        AND sx.POLLERIA_id_polleria = @IdPolleria
+                    WHERE x.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
+                      AND x.estado = 1 AND x.tipo_consumo = 'PRESA'
+                    ORDER BY ISNULL(sx.stock_actual, 0) / NULLIF(x.cantidad_requerida, 0) DESC))
+             OR NOT EXISTS (SELECT 1 FROM INSUMO_PRODUCTO y
+                            WHERE y.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
+                              AND y.estado = 1 AND y.tipo_consumo IN ('FIJO', 'PRESA')));
+
+    -- Verificar si existen insumos para el producto
+    IF NOT EXISTS (SELECT 1 FROM #ValidacionStock)
+    BEGIN
+        SET @StockSuficiente = 0;
+        SET @MensajeValidacion = 'El producto no tiene insumos asignados.';
+        SET @UnidadesMaximasProducibles = 0;
+        SET @Resultado = @StockSuficiente;
+        SET @Mensaje = @MensajeValidacion;
+        SET @UnidadesPosibles = @UnidadesMaximasProducibles;
+
+        -- Retornar resultado vacío
+        SELECT * FROM #ValidacionStock;
+
+        SELECT
+            @StockSuficiente AS StockSuficiente,
+            @MensajeValidacion AS MensajeValidacion,
+            @UnidadesMaximasProducibles AS UnidadesMaximasProducibles,
+            @CantidadProducir AS CantidadSolicitada,
+            'Asigne insumos al producto antes de validar stock.' AS Recomendacion;
+
+        DROP TABLE #ValidacionStock;
+        RETURN;
+    END
+
+    -- Determinar si hay stock suficiente
+    IF EXISTS (SELECT 1 FROM #ValidacionStock WHERE Suficiente = 0)
+    BEGIN
+        SET @StockSuficiente = 0;
+
+        -- Encontrar el insumo más limitante
+        SELECT TOP 1
+            @InsumoLimitante = NombreInsumo,
+            @CantidadLimitante = UnidadesPosibles
+        FROM #ValidacionStock
+        WHERE UnidadesPosibles IS NOT NULL
+        ORDER BY UnidadesPosibles;
+
+        SET @UnidadesMaximasProducibles = ISNULL(@CantidadLimitante, 0);
+        SET @MensajeValidacion = 'Stock insuficiente para producir ' + CAST(@CantidadProducir AS NVARCHAR) +
+                                ' unidades de "' + @NombreProducto + '". ' +
+                                'El insumo más limitante es "' + @InsumoLimitante +
+                                '". Máximo posible: ' + CAST(@CantidadLimitante AS NVARCHAR) + ' unidades.';
+    END
+    ELSE
+    BEGIN
+        -- Calcular unidades máximas producibles
+        SELECT @UnidadesMaximasProducibles = MIN(UnidadesPosibles)
+        FROM #ValidacionStock
+        WHERE UnidadesPosibles IS NOT NULL;
+
+        IF @CantidadProducir <= @UnidadesMaximasProducibles
+        BEGIN
+            SET @MensajeValidacion = 'Stock suficiente para producir ' + CAST(@CantidadProducir AS NVARCHAR) +
+                                    ' unidades de "' + @NombreProducto + '". ' +
+                                    'Se pueden producir hasta ' +
+                                    CAST(@UnidadesMaximasProducibles AS NVARCHAR) + ' unidades.';
+        END
+        ELSE
+        BEGIN
+            SET @MensajeValidacion = 'Stock suficiente, pero se pueden producir solo ' +
+                                    CAST(@UnidadesMaximasProducibles AS NVARCHAR) +
+                                    ' unidades de "' + @NombreProducto + '". ' +
+                                    'Se solicitó: ' + CAST(@CantidadProducir AS NVarchar);
+        END
+    END
+
+    -- 1. Retornar detalles de validación
+    SELECT * FROM #ValidacionStock
+    ORDER BY Suficiente, UnidadesPosibles;
+
+    -- 2. Retornar resumen
+    SELECT
+        @StockSuficiente AS StockSuficiente,
+        @MensajeValidacion AS MensajeValidacion,
+        @UnidadesMaximasProducibles AS UnidadesMaximasProducibles,
+        @CantidadProducir AS CantidadSolicitada,
+        CASE
+            WHEN @StockSuficiente = 1 AND @CantidadProducir <= @UnidadesMaximasProducibles
+            THEN 'Puede proceder con la producción de ' + @NombreProducto + '.'
+            WHEN @StockSuficiente = 1 AND @CantidadProducir > @UnidadesMaximasProducibles
+            THEN 'Ajuste la cantidad a ' + CAST(@UnidadesMaximasProducibles AS NVARCHAR) + ' unidades.'
+            ELSE 'Necesita reponer stock de insumos antes de producir ' + @NombreProducto + '.'
+        END AS Recomendacion;
+
+    -- Establecer valores de salida
+    SET @Resultado = @StockSuficiente;
+    SET @Mensaje = @MensajeValidacion;
+    SET @UnidadesPosibles = @UnidadesMaximasProducibles;
+
+    -- Limpiar tabla temporal
+    DROP TABLE #ValidacionStock;
+END
+GO
+
+-- ============================================================================
+-- Presentación de compra que alimenta varios insumos (pollo entero -> presas).
+-- La presentación pertenece a un insumo (ej. Pecho, factor 2) y sus componentes
+-- agregan los demás (Ala 2, Pierna 2, Contrapierna 2).
+-- ============================================================================
+IF OBJECT_ID('dbo.PRESENTACION_COMPONENTE', 'U') IS NULL
+    CREATE TABLE dbo.PRESENTACION_COMPONENTE (
+        id_presentacion_componente INT IDENTITY(1,1) PRIMARY KEY,
+        PRESENTACION_id_presentacion INT NOT NULL
+            CONSTRAINT FK_PRESENTACION_COMPONENTE_PRESENTACION REFERENCES dbo.PRESENTACION_INSUMO(id_presentacion),
+        INSUMO_id_insumo INT NOT NULL
+            CONSTRAINT FK_PRESENTACION_COMPONENTE_INSUMO REFERENCES dbo.INSUMO(id_insumo),
+        factor DECIMAL(12,4) NOT NULL CONSTRAINT CK_PRESENTACION_COMPONENTE_FACTOR CHECK (factor > 0),
+        CONSTRAINT UQ_PRESENTACION_COMPONENTE UNIQUE (PRESENTACION_id_presentacion, INSUMO_id_insumo)
+    );
+GO
+
+CREATE OR ALTER PROCEDURE [dbo].[sp_Compra_Registrar]
+    @IdUsuario INT,
+    @IdProveedor INT,
+    @IdPolleria INT,
+    @IdTipoCompra INT = NULL,
+    @IdTipoPago INT = 1, -- Parámetro para seleccionar la forma de pago (1 por defecto si no se especifica)
+    @Referencia VARCHAR(100) = NULL,
+    @MontoTotal DECIMAL(10,2),
+    @Estado VARCHAR(50) = 'COMPLETADA',
+    @Detalles XML,
+    @Resultado BIT OUTPUT,
+    @Mensaje VARCHAR(500) OUTPUT,
+    @IdCompraGenerada INT OUTPUT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    SET @Resultado = 0;
+    SET @IdCompraGenerada = 0;
+    SET @Mensaje = '';
+
+    DECLARE @TablaDetalles TABLE (
+        RowID INT IDENTITY(1,1),
+        IdItem INT,
+        Tipo VARCHAR(20),
+        IdPresentacion INT NULL,
+        CantidadPresentacion DECIMAL(12,4) NULL,
+        Cantidad DECIMAL(12,4),
+        PrecioUnitario DECIMAL(12,4),
+        Subtotal DECIMAL(10,2)
+    );
+
+    BEGIN TRY
+        -- 1. VALIDACIONES BÁSICAS
+        IF NOT EXISTS (SELECT 1 FROM USUARIOS WHERE id_usuario = @IdUsuario AND estado = 1)
+        BEGIN
+            SET @Mensaje = 'Usuario no válido o inactivo';
+            RETURN;
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM PROVEEDOR WHERE id_proveedor = @IdProveedor AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'Proveedor no válido o inactivo';
+            RETURN;
+        END
+
+        IF NOT EXISTS (SELECT 1 FROM POLLERIA WHERE id_polleria = @IdPolleria AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'Pollería no válida o inactiva';
+            RETURN;
+        END
+
+        IF @IdTipoPago IS NOT NULL AND NOT EXISTS (SELECT 1 FROM TIPO_PAGO WHERE id_tipoPago = @IdTipoPago AND Estado = 1)
+        BEGIN
+            SET @Mensaje = 'El tipo de pago seleccionado no es válido o está inactivo';
+            RETURN;
+        END
+
+        -- 2. PARSEAR DETALLES XML
+        INSERT INTO @TablaDetalles (IdItem, Tipo, IdPresentacion, Cantidad, PrecioUnitario, Subtotal)
+        SELECT
+            T.Item.value('@IdItem', 'INT'),
+            T.Item.value('@Tipo', 'VARCHAR(20)'),
+            NULLIF(T.Item.value('@IdPresentacion', 'INT'), 0),
+            T.Item.value('@Cantidad', 'DECIMAL(12,4)'),
+            T.Item.value('@PrecioUnitario', 'DECIMAL(12,4)'),
+            T.Item.value('@Subtotal', 'DECIMAL(10,2)')
+        FROM @Detalles.nodes('/Detalles/Detalle') AS T(Item);
+
+        IF NOT EXISTS (SELECT 1 FROM @TablaDetalles)
+        BEGIN
+            SET @Mensaje = 'Debe ingresar al menos un detalle';
+            RETURN;
+        END
+
+        -- 2.1 PRESENTACIONES DE COMPRA: la cantidad llega en la presentación (ej. 2 quintales)
+        --     y se convierte a la unidad del insumo (ej. 92 kg) para el stock y el precio unitario.
+        IF EXISTS (
+            SELECT 1 FROM @TablaDetalles td
+            WHERE td.IdPresentacion IS NOT NULL
+              AND (td.Tipo <> 'INSUMO' OR NOT EXISTS (
+                    SELECT 1 FROM PRESENTACION_INSUMO pi
+                    WHERE pi.id_presentacion = td.IdPresentacion
+                      AND pi.INSUMO_id_insumo = td.IdItem))
+        )
+        BEGIN
+            SET @Mensaje = 'La presentación seleccionada no es válida para el insumo';
+            RETURN;
+        END
+
+        UPDATE td
+        SET CantidadPresentacion = td.Cantidad,
+            Cantidad = td.Cantidad * pi.factor,
+            PrecioUnitario = CASE WHEN td.Cantidad * pi.factor > 0 THEN td.Subtotal / (td.Cantidad * pi.factor) ELSE 0 END
+        FROM @TablaDetalles td
+        INNER JOIN PRESENTACION_INSUMO pi ON pi.id_presentacion = td.IdPresentacion;
+
+        -- 2.2 PRESENTACIONES CON VARIOS INSUMOS: 1 pollo entero = 2 pechos + 2 alas + 2 piernas + 2 contrapiernas.
+        --     Se agrega una línea por insumo componente y el subtotal se reparte según la cantidad de unidades.
+        DECLARE @Componentes TABLE (RowID INT, IdInsumo INT, Factor DECIMAL(12,4), FactorTotal DECIMAL(12,4), Subtotal DECIMAL(10,2));
+
+        INSERT INTO @Componentes (RowID, IdInsumo, Factor, FactorTotal)
+        SELECT td.RowID, pc.INSUMO_id_insumo, pc.factor,
+               pi.factor + SUM(pc.factor) OVER (PARTITION BY td.RowID)
+        FROM @TablaDetalles td
+        INNER JOIN PRESENTACION_INSUMO pi ON pi.id_presentacion = td.IdPresentacion
+        INNER JOIN PRESENTACION_COMPONENTE pc ON pc.PRESENTACION_id_presentacion = pi.id_presentacion
+        WHERE td.CantidadPresentacion > 0;
+
+        UPDATE c SET Subtotal = ROUND(td.Subtotal * c.Factor / c.FactorTotal, 2)
+        FROM @Componentes c INNER JOIN @TablaDetalles td ON td.RowID = c.RowID;
+
+        INSERT INTO @TablaDetalles (IdItem, Tipo, IdPresentacion, CantidadPresentacion, Cantidad, PrecioUnitario, Subtotal)
+        SELECT c.IdInsumo, 'INSUMO', td.IdPresentacion, td.CantidadPresentacion,
+               td.CantidadPresentacion * c.Factor,
+               td.Subtotal / (td.CantidadPresentacion * c.FactorTotal),
+               c.Subtotal
+        FROM @Componentes c INNER JOIN @TablaDetalles td ON td.RowID = c.RowID;
+
+        UPDATE td
+        SET PrecioUnitario = td.Subtotal / (td.CantidadPresentacion * x.FactorTotal),
+            Subtotal = td.Subtotal - x.SubtotalComponentes
+        FROM @TablaDetalles td
+        INNER JOIN (SELECT RowID, MAX(FactorTotal) AS FactorTotal, SUM(Subtotal) AS SubtotalComponentes
+                    FROM @Componentes GROUP BY RowID) x ON x.RowID = td.RowID;
+
+        -- 3. VALIDAR ITEMS
+        DECLARE @IdItem INT, @Tipo VARCHAR(20), @Cantidad DECIMAL(12,4);
+        DECLARE @RowCount INT = 1, @MaxRow INT = (SELECT MAX(RowID) FROM @TablaDetalles);
+
+        WHILE @RowCount <= @MaxRow
+        BEGIN
+            SELECT @IdItem = IdItem, @Tipo = Tipo, @Cantidad = Cantidad
+            FROM @TablaDetalles WHERE RowID = @RowCount;
+
+            IF @Tipo = 'PRODUCTO'
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM PRODUCTO WHERE id_producto = @IdItem AND Estado = 1)
+                BEGIN
+                    SET @Mensaje = 'Producto ID ' + CAST(@IdItem AS VARCHAR) + ' no existe o está inactivo';
+                    RETURN;
+                END
+            END
+            ELSE IF @Tipo = 'INSUMO'
+            BEGIN
+                IF NOT EXISTS (SELECT 1 FROM INSUMO WHERE id_insumo = @IdItem AND estado = 1)
+                BEGIN
+                    SET @Mensaje = 'Insumo ID ' + CAST(@IdItem AS VARCHAR) + ' no existe o está inactivo';
+                    RETURN;
+                END
+            END
+            ELSE
+            BEGIN
+                SET @Mensaje = 'Tipo de item no válido: ' + @Tipo;
+                RETURN;
+            END
+
+            IF @Cantidad <= 0
+            BEGIN
+                SET @Mensaje = 'La cantidad debe ser mayor a 0 para el item ID ' + CAST(@IdItem AS VARCHAR);
+                RETURN;
+            END
+
+            SET @RowCount = @RowCount + 1;
+        END
+
+        -- 4. INICIAR TRANSACCIÓN
+        BEGIN TRANSACTION;
+
+        -- 5. INSERTAR CABECERA DE COMPRA
+        INSERT INTO COMPRA (
+            Referencia,
+            MontoTotal,
+            FechaCompra,
+            FechaRegistro,
+            Estado,
+            USUARIOS_id_usuario,
+            PROVEEDOR_id_proveedor,
+            TIPO_COMPRA_id_tipoCompra
+        ) VALUES (
+            @Referencia,
+            @MontoTotal,
+            GETDATE(),
+            GETDATE(),
+            @Estado,
+            @IdUsuario,
+            @IdProveedor,
+            @IdTipoCompra
+        );
+
+        SET @IdCompraGenerada = SCOPE_IDENTITY();
+
+        -- 6. INSERTAR DETALLES
+        INSERT INTO DETALLE_COMPRA (
+            precioUnitario,
+            cantidad,
+            subtotal,
+            COMPRA_id_compra,
+            PRODUCTO_id_producto,
+            INSUMO_id_insumo,
+            PRESENTACION_id_presentacion,
+            cantidad_presentacion
+        )
+        SELECT
+            PrecioUnitario,
+            Cantidad,
+            Subtotal,
+            @IdCompraGenerada,
+            CASE WHEN Tipo = 'PRODUCTO' THEN IdItem ELSE NULL END,
+            CASE WHEN Tipo = 'INSUMO' THEN IdItem ELSE NULL END,
+            IdPresentacion,
+            CantidadPresentacion
+        FROM @TablaDetalles;
+
+        -- 7. ACTUALIZAR STOCK Y REGISTRAR PAGO SI ESTÁ COMPLETADA
+        IF @Estado = 'COMPLETADA'
+        BEGIN
+            DECLARE @ObservacionesMovimiento VARCHAR(500) = 'Compra N° ' +
+                CASE
+                    WHEN @Referencia IS NOT NULL AND RTRIM(LTRIM(@Referencia)) <> '' THEN @Referencia
+                    ELSE CAST(@IdCompraGenerada AS VARCHAR(10))
+                END;
+
+            SET @RowCount = 1;
+
+            WHILE @RowCount <= @MaxRow
+            BEGIN
+                SELECT @IdItem = IdItem, @Tipo = Tipo, @Cantidad = Cantidad
+                FROM @TablaDetalles WHERE RowID = @RowCount;
+
+                IF @Tipo = 'PRODUCTO'
+                BEGIN
+                    EXEC dbo.sp_ActualizarStockProducto
+                        @id_producto = @IdItem,
+                        @id_polleria = @IdPolleria,
+                        @cantidad = @Cantidad,
+                        @id_usuario = @IdUsuario,
+                        @tipo_movimiento = 'COMPRA',
+                        @id_referencia = @IdCompraGenerada,
+                        @observaciones = @ObservacionesMovimiento;
+                END
+                ELSE IF @Tipo = 'INSUMO'
+                BEGIN
+                    EXEC dbo.sp_ActualizarStockInsumo
+                        @id_insumo = @IdItem,
+                        @id_polleria = @IdPolleria,
+                        @cantidad = @Cantidad,
+                        @id_usuario = @IdUsuario,
+                        @tipo_movimiento = 'COMPRA',
+                        @id_referencia = @IdCompraGenerada,
+                        @observaciones = @ObservacionesMovimiento;
+                END
+
+                SET @RowCount = @RowCount + 1;
+            END
+
+            -- Registrar pago con el tipo de pago enviado por el usuario
+            INSERT INTO PAGO_COMPRA (
+                monto,
+                fecha_pago,
+                estado,
+                COMPRA_id_compra,
+                TIPO_PAGO_id_tipoPago
+            ) VALUES (
+                @MontoTotal,
+                GETDATE(),
+                1,
+                @IdCompraGenerada,
+                ISNULL(@IdTipoPago, 1)
+            );
+        END
+
+        SET @Resultado = 1;
+        SET @Mensaje = 'Compra registrada exitosamente. ID: ' + CAST(@IdCompraGenerada AS VARCHAR);
+
+        COMMIT TRANSACTION;
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+
+        SET @Resultado = 0;
+        SET @Mensaje = 'Error al registrar compra: ' + ERROR_MESSAGE();
+    END CATCH
+END;
+GO

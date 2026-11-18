@@ -122,7 +122,7 @@ namespace CapaDatos
             return resultado;
         }
 
-        public bool RegistrarRecetaMultiple(int idProducto, List<CMInsumoProducto> listaInsumos, out string mensaje)
+        public bool RegistrarRecetaMultiple(int idProducto, List<CMInsumoProducto> listaInsumos, out string mensaje, bool quitarOmitidos = false)
         {
             mensaje = "";
             bool resultado = false;
@@ -160,6 +160,7 @@ namespace CapaDatos
                             string queryUpdate = @"UPDATE INSUMO_PRODUCTO 
                                            SET cantidad_requerida = @Cantidad, 
                                                observaciones = @Obs, 
+                                               tipo_consumo = @Tipo, 
                                                estado = 1, 
                                                fecha_actualizacion = GETDATE() 
                                            WHERE id_insumo_producto = @Id";
@@ -169,6 +170,7 @@ namespace CapaDatos
                                 cmdUpd.Parameters.AddWithValue("@Cantidad", item.cantidad_requerida);
                                 cmdUpd.Parameters.AddWithValue("@Obs", string.IsNullOrEmpty(item.observaciones) ? (object)DBNull.Value : item.observaciones);
                                 cmdUpd.Parameters.AddWithValue("@Id", idExistente);
+                                cmdUpd.Parameters.AddWithValue("@Tipo", NormalizarTipoConsumo(item.tipo_consumo));
                                 cmdUpd.ExecuteNonQuery();
                             }
                         }
@@ -176,8 +178,8 @@ namespace CapaDatos
                         {
                             // Si es nuevo en la receta, se inserta
                             string queryInsert = @"INSERT INTO INSUMO_PRODUCTO 
-                                           (PRODUCTO_id_producto, INSUMO_id_insumo, cantidad_requerida, observaciones, estado, fecha_registro) 
-                                           VALUES (@IdProducto, @IdInsumo, @Cantidad, @Obs, 1, GETDATE())";
+                                           (PRODUCTO_id_producto, INSUMO_id_insumo, cantidad_requerida, observaciones, tipo_consumo, estado, fecha_registro) 
+                                           VALUES (@IdProducto, @IdInsumo, @Cantidad, @Obs, @Tipo, 1, GETDATE())";
 
                             using (SqlCommand cmdIns = new SqlCommand(queryInsert, cn, transaccion))
                             {
@@ -185,8 +187,25 @@ namespace CapaDatos
                                 cmdIns.Parameters.AddWithValue("@IdInsumo", item.INSUMO_id_insumo);
                                 cmdIns.Parameters.AddWithValue("@Cantidad", item.cantidad_requerida);
                                 cmdIns.Parameters.AddWithValue("@Obs", string.IsNullOrEmpty(item.observaciones) ? (object)DBNull.Value : item.observaciones);
+                                cmdIns.Parameters.AddWithValue("@Tipo", NormalizarTipoConsumo(item.tipo_consumo));
                                 cmdIns.ExecuteNonQuery();
                             }
+                        }
+                    }
+
+                    // La receta se guarda completa: lo que se quitó en pantalla queda inactivo
+                    if (quitarOmitidos)
+                    {
+                        var idsInsumos = listaInsumos.Select(i => i.INSUMO_id_insumo).Distinct().ToList();
+                        string queryDesactivar = "UPDATE INSUMO_PRODUCTO SET estado = 0, fecha_actualizacion = GETDATE() " +
+                                                 "WHERE PRODUCTO_id_producto = @IdProducto AND estado = 1 AND INSUMO_id_insumo NOT IN (" +
+                                                 string.Join(",", idsInsumos.Select((id, n) => "@Ins" + n)) + ")";
+                        using (SqlCommand cmdDes = new SqlCommand(queryDesactivar, cn, transaccion))
+                        {
+                            cmdDes.Parameters.AddWithValue("@IdProducto", idProducto);
+                            for (int n = 0; n < idsInsumos.Count; n++)
+                                cmdDes.Parameters.AddWithValue("@Ins" + n, idsInsumos[n]);
+                            cmdDes.ExecuteNonQuery();
                         }
                     }
 
@@ -396,6 +415,58 @@ namespace CapaDatos
             }
 
             System.Diagnostics.Debug.WriteLine($"Total obtenido: {lista.Count}");
+            return lista;
+        }
+
+        public static string NormalizarTipoConsumo(string tipo)
+        {
+            var t = (tipo ?? "").Trim().ToUpperInvariant();
+            return t == "GUARNICION" || t == "PRESA" ? t : "FIJO";
+        }
+
+        // Receta activa con su tipo de consumo (ventas y listado agrupado por producto)
+        public List<CMInsumoProducto> ObtenerRecetaConTipo(int? idProducto = null)
+        {
+            var lista = new List<CMInsumoProducto>();
+            using (SqlConnection cn = new SqlConnection(Conexion.CN))
+            {
+                string query = @"
+                    SELECT ip.id_insumo_producto, ip.PRODUCTO_id_producto, ip.INSUMO_id_insumo, ip.cantidad_requerida,
+                           ip.tipo_consumo, ip.estado, ip.observaciones, p.Nombre AS NombreProducto, ISNULL(p.PrecioVenta, 0) AS PrecioVenta,
+                           i.nombre AS NombreInsumo, ISNULL(m.Descripcion, '') AS Medida, ISNULL(m.Abreviatura, '') AS Abreviatura
+                    FROM INSUMO_PRODUCTO ip
+                    INNER JOIN PRODUCTO p ON p.id_producto = ip.PRODUCTO_id_producto
+                    INNER JOIN INSUMO i ON i.id_insumo = ip.INSUMO_id_insumo
+                    LEFT JOIN MEDIDAS m ON m.id_medida = i.MEDIDAS_id_medida
+                    WHERE ip.estado = 1 AND (@IdProducto IS NULL OR ip.PRODUCTO_id_producto = @IdProducto)
+                    ORDER BY p.Nombre,
+                             CASE ip.tipo_consumo WHEN 'FIJO' THEN 1 WHEN 'PRESA' THEN 2 ELSE 3 END,
+                             i.nombre";
+                SqlCommand cmd = new SqlCommand(query, cn);
+                cmd.Parameters.AddWithValue("@IdProducto", (object)idProducto ?? DBNull.Value);
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                    {
+                        lista.Add(new CMInsumoProducto
+                        {
+                            id_insumo_producto = Convert.ToInt32(dr["id_insumo_producto"]),
+                            PRODUCTO_id_producto = Convert.ToInt32(dr["PRODUCTO_id_producto"]),
+                            INSUMO_id_insumo = Convert.ToInt32(dr["INSUMO_id_insumo"]),
+                            cantidad_requerida = Convert.ToDecimal(dr["cantidad_requerida"]),
+                            tipo_consumo = dr["tipo_consumo"].ToString(),
+                            estado = Convert.ToBoolean(dr["estado"]),
+                            observaciones = dr["observaciones"] == DBNull.Value ? "" : dr["observaciones"].ToString(),
+                            NombreProducto = dr["NombreProducto"].ToString(),
+                            PrecioVentaProducto = Convert.ToDecimal(dr["PrecioVenta"]),
+                            NombreInsumo = dr["NombreInsumo"].ToString(),
+                            MedidaInsumo = dr["Medida"].ToString(),
+                            AbreviaturaMedida = dr["Abreviatura"].ToString()
+                        });
+                    }
+                }
+            }
             return lista;
         }
 

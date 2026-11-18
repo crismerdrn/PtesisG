@@ -286,7 +286,28 @@ namespace PTesis.Controllers
 
             if (compra.Detalles != null && compra.Detalles.Any())
             {
-                var detallesJson = compra.Detalles.Select(d => new
+                // Las líneas que agregó una presentación con varios insumos (pollo entero -> presas)
+                // se vuelven a juntar en la línea principal, tal como se compró.
+                var detallesEdicion = new List<CMDetalleCompra>();
+                var subtotales = new Dictionary<CMDetalleCompra, decimal>();
+                var principalPorPresentacion = new Dictionary<int, CMDetalleCompra>();
+                foreach (var d in compra.Detalles)
+                {
+                    CMDetalleCompra principal = null;
+                    if (d.IdPresentacion.HasValue
+                        && principalPorPresentacion.TryGetValue(d.IdPresentacion.Value, out principal)
+                        && principal.INSUMO_id_insumo != d.INSUMO_id_insumo)
+                    {
+                        subtotales[principal] += d.subtotal;
+                        continue;
+                    }
+                    detallesEdicion.Add(d);
+                    subtotales[d] = d.subtotal;
+                    if (d.IdPresentacion.HasValue)
+                        principalPorPresentacion[d.IdPresentacion.Value] = d;
+                }
+
+                var detallesJson = detallesEdicion.Select(d => new
                 {
                     IdItemSeleccionado = d.TipoItem == "PRODUCTO" ?
                         (d.PRODUCTO_id_producto ?? 0) :
@@ -298,8 +319,8 @@ namespace PTesis.Controllers
                     abreviatura = d.AbreviaturaMedida,
                     // Con presentación se edita como se compró (ej. 2 Quintal), no en kg.
                     cantidad = d.cantidad_presentacion ?? d.cantidad,
-                    precioUnitario = d.cantidad_presentacion > 0 ? Math.Round(d.subtotal / d.cantidad_presentacion.Value, 4) : d.precioUnitario,
-                    subtotal = d.subtotal,
+                    precioUnitario = d.cantidad_presentacion > 0 ? Math.Round(subtotales[d] / d.cantidad_presentacion.Value, 4) : d.precioUnitario,
+                    subtotal = subtotales[d],
                     stockActual = d.StockActual,
                     IdPresentacion = d.IdPresentacion
                 }).ToList();

@@ -29,6 +29,9 @@ namespace CapaModelo
         [Display(Name = "Observaciones")]
         public string observaciones { get; set; }
 
+        // FIJO: siempre se descuenta. GUARNICION: solo si se marca al vender. PRESA: se elige una al vender.
+        public string tipo_consumo { get; set; } = "FIJO";
+
         public bool estado { get; set; } = true;
         public DateTime fecha_registro { get; set; } = DateTime.Now;
         public DateTime? fecha_actualizacion { get; set; }
