@@ -1786,8 +1786,7 @@ BEGIN
               AND (td.Tipo <> 'INSUMO' OR NOT EXISTS (
                     SELECT 1 FROM PRESENTACION_INSUMO pi
                     WHERE pi.id_presentacion = td.IdPresentacion
-                      AND pi.INSUMO_id_insumo = td.IdItem
-                      AND pi.estado = 1))
+                      AND pi.INSUMO_id_insumo = td.IdItem))
         )
         BEGIN
             SET @Mensaje = 'La presentación seleccionada no es válida para el insumo';

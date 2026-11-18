@@ -656,14 +656,16 @@ namespace PTesis.Controllers
         }
 
         [HttpPost]
-        public JsonResult ObtenerPresentaciones(int idInsumo)
+        public JsonResult ObtenerPresentaciones(int idInsumo, int? idPresentacionActual = null)
         {
             if (!TienePermiso("Compras"))
             {
                 return Json(new List<object>(), JsonRequestBehavior.AllowGet);
             }
 
-            var presentaciones = cdInsumo.ListarPresentaciones(idInsumo, true)
+            // Incluye la presentación ya usada en la compra aunque luego se haya desactivado.
+            var presentaciones = cdInsumo.ListarPresentaciones(idInsumo, false)
+                .Where(p => p.estado || p.id_presentacion == idPresentacionActual)
                 .Select(p => new { id = p.id_presentacion, nombre = p.nombre, factor = p.factor })
                 .ToList();
 

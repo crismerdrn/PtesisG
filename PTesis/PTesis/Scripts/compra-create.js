@@ -170,7 +170,7 @@ function agregarFilaDetalle(detalle, index) {
 function cargarPresentaciones(detalle) {
     if (!COMPRA_CONFIG.urlObtenerPresentaciones) return;
 
-    $.post(COMPRA_CONFIG.urlObtenerPresentaciones, { idInsumo: detalle.IdItemSeleccionado }, function (lista) {
+    $.post(COMPRA_CONFIG.urlObtenerPresentaciones, { idInsumo: detalle.IdItemSeleccionado, idPresentacionActual: detalle.IdPresentacion || null }, function (lista) {
         detalle.presentaciones = lista || [];
         const index = detalles.indexOf(detalle);
         if (index < 0 || detalle.presentaciones.length === 0) return;
