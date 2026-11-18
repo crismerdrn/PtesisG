@@ -23,5 +23,10 @@ namespace CapaModelo
         public string MedidaItem { get; set; }
         public string AbreviaturaMedida { get; set; }
         public decimal StockActual { get; set; }
+
+        // Presentación de compra (ej. Quintal). cantidad y precioUnitario quedan en la unidad del insumo.
+        public int? IdPresentacion { get; set; }
+        public string NombrePresentacion { get; set; }
+        public decimal? cantidad_presentacion { get; set; }
     }
 }

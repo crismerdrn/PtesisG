@@ -398,7 +398,16 @@
                                     <span class="badge badge-insumo">INSUMO</span>
                                 }
                             </td>
-                            <td class="text-center">@detalle.cantidad</td>
+                            <td class="text-center">
+                                        @if (detalle.cantidad_presentacion.HasValue)
+                                        {
+                                            @detalle.cantidad_presentacion.Value.ToString("#,##0.####") @(" " + detalle.NombrePresentacion)<br /><small class="text-muted">(@detalle.cantidad.ToString("#,##0.####") @detalle.AbreviaturaMedida)</small>
+                                        }
+                                        else
+                                        {
+                                            @detalle.cantidad.ToString("#,##0.####")
+                                        }
+                                    </td>
                             <td class="text-end">Bs. @detalle.precioUnitario.ToString("0.00")</td>
                             <td class="text-end" style="font-weight: bold;">Bs. @detalle.subtotal.ToString("0.00")</td>
                             <td class="text-center">

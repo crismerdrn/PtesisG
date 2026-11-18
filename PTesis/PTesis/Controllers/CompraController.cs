@@ -296,10 +296,12 @@ namespace PTesis.Controllers
                     descripcion = d.DescripcionItem,
                     medida = d.MedidaItem,
                     abreviatura = d.AbreviaturaMedida,
-                    cantidad = d.cantidad,
-                    precioUnitario = d.precioUnitario,
+                    // Con presentación se edita como se compró (ej. 2 Quintal), no en kg.
+                    cantidad = d.cantidad_presentacion ?? d.cantidad,
+                    precioUnitario = d.cantidad_presentacion > 0 ? Math.Round(d.subtotal / d.cantidad_presentacion.Value, 4) : d.precioUnitario,
                     subtotal = d.subtotal,
-                    stockActual = d.StockActual
+                    stockActual = d.StockActual,
+                    IdPresentacion = d.IdPresentacion
                 }).ToList();
 
                 ViewBag.DetallesJson = Newtonsoft.Json.JsonConvert.SerializeObject(detallesJson);
@@ -654,6 +656,23 @@ namespace PTesis.Controllers
         }
 
         [HttpPost]
+        public JsonResult ObtenerPresentaciones(int idInsumo, int? idPresentacionActual = null)
+        {
+            if (!TienePermiso("Compras") && !PuedeEditar("Compras"))
+            {
+                return Json(new List<object>(), JsonRequestBehavior.AllowGet);
+            }
+
+            // Incluye la presentación ya usada en la compra aunque luego se haya desactivado.
+            var presentaciones = cdInsumo.ListarPresentaciones(idInsumo, false)
+                .Where(p => p.estado || p.id_presentacion == idPresentacionActual)
+                .Select(p => new { id = p.id_presentacion, nombre = p.nombre, factor = p.factor })
+                .ToList();
+
+            return Json(presentaciones, JsonRequestBehavior.AllowGet);
+        }
+
+        [HttpPost]
         public JsonResult ObtenerStockDisponible(int idItem, string tipoItem)
         {
             try
@@ -754,6 +773,13 @@ namespace PTesis.Controllers
                             precioUnitario = Convert.ToDecimal(item.precioUnitario),
                             subtotal = Convert.ToDecimal(item.subtotal)
                         };
+
+                        int idPresentacion;
+                        int.TryParse(Convert.ToString(item.IdPresentacion), out idPresentacion);
+                        if (tipoItem == "INSUMO" && idPresentacion > 0)
+                        {
+                            detalle.IdPresentacion = idPresentacion;
+                        }
 
                         if (detalle.TipoItem == "PRODUCTO")
                         {

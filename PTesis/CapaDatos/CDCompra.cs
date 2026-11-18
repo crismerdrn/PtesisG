@@ -128,6 +128,11 @@ namespace CapaDatos
                     new XAttribute("Subtotal", detalle.subtotal)
                 );
 
+                if (detalle.IdPresentacion.HasValue)
+                {
+                    detalleXml.Add(new XAttribute("IdPresentacion", detalle.IdPresentacion.Value));
+                }
+
                 detallesXml.Add(detalleXml);
             }
 
@@ -307,8 +312,12 @@ namespace CapaDatos
                             WHEN dc.INSUMO_id_insumo IS NOT NULL THEN 
                                 ISNULL(si.stock_actual, 0)
                             ELSE 0
-                        END AS StockActual
+                        END AS StockActual,
+                        dc.PRESENTACION_id_presentacion,
+                        dc.cantidad_presentacion,
+                        pi.nombre AS NombrePresentacion
                     FROM DETALLE_COMPRA dc
+                    LEFT JOIN PRESENTACION_INSUMO pi ON dc.PRESENTACION_id_presentacion = pi.id_presentacion
                     LEFT JOIN PRODUCTO p ON dc.PRODUCTO_id_producto = p.id_producto
                     LEFT JOIN INSUMO i ON dc.INSUMO_id_insumo = i.id_insumo
                     LEFT JOIN MEDIDAS mp ON p.MEDIDAS_id_medida = mp.id_medida
@@ -344,7 +353,10 @@ namespace CapaDatos
                                     DescripcionItem = dr["DescripcionItem"] != DBNull.Value ? dr["DescripcionItem"].ToString() : "",
                                     MedidaItem = dr["MedidaItem"] != DBNull.Value ? dr["MedidaItem"].ToString() : "",
                                     AbreviaturaMedida = dr["AbreviaturaMedida"] != DBNull.Value ? dr["AbreviaturaMedida"].ToString() : "",
-                                    StockActual = Convert.ToDecimal(dr["StockActual"])
+                                    StockActual = Convert.ToDecimal(dr["StockActual"]),
+                                    IdPresentacion = dr["PRESENTACION_id_presentacion"] != DBNull.Value ? Convert.ToInt32(dr["PRESENTACION_id_presentacion"]) : (int?)null,
+                                    cantidad_presentacion = dr["cantidad_presentacion"] != DBNull.Value ? Convert.ToDecimal(dr["cantidad_presentacion"]) : (decimal?)null,
+                                    NombrePresentacion = dr["NombrePresentacion"] != DBNull.Value ? dr["NombrePresentacion"].ToString() : null
                                 });
                             }
                         }

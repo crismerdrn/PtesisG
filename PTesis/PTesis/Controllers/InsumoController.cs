@@ -114,8 +114,44 @@ namespace PTesis.Controllers
             }
 
             CargarMedidas(insumo.MEDIDAS_id_medida);
+            ViewBag.Presentaciones = cdInsumo.ListarPresentaciones(id, false);
 
             return View(insumo);
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult AgregarPresentacion(int idInsumo, string nombre, decimal factor)
+        {
+            if (!PuedeEditar("Insumos"))
+            {
+                TempData["Error"] = "No tiene permisos para editar Insumos.";
+                return RedirectToAction("Index");
+            }
+
+            string mensaje;
+            var presentacion = new CMPresentacionInsumo { INSUMO_id_insumo = idInsumo, nombre = nombre, factor = factor };
+            bool ok = cdInsumo.RegistrarPresentacion(presentacion, out mensaje);
+            TempData[ok ? "Exito" : "Error"] = mensaje;
+
+            return RedirectToAction("Edit", new { id = idInsumo });
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public ActionResult CambiarEstadoPresentacion(int idInsumo, int idPresentacion, bool estado)
+        {
+            if (!PuedeEditar("Insumos"))
+            {
+                TempData["Error"] = "No tiene permisos para editar Insumos.";
+                return RedirectToAction("Index");
+            }
+
+            string mensaje;
+            bool ok = cdInsumo.CambiarEstadoPresentacion(idPresentacion, estado, out mensaje);
+            TempData[ok ? "Exito" : "Error"] = mensaje;
+
+            return RedirectToAction("Edit", new { id = idInsumo });
         }
 
         [HttpPost]

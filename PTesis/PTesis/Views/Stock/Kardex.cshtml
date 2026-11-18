@@ -17,13 +17,13 @@
         <div class="col-md-3">
             <div class="card border-0 shadow-sm"><div class="card-body">
                 <small class="text-muted">Stock actual</small>
-                <div class="fs-4 fw-bold">@(((decimal)ViewBag.StockActual).ToString("N2"))</div>
+                <div class="fs-4 fw-bold">@(((decimal)ViewBag.StockActual).ToString("#,##0.####"))</div>
             </div></div>
         </div>
         <div class="col-md-3">
             <div class="card border-0 shadow-sm"><div class="card-body">
                 <small class="text-muted">Stock mínimo</small>
-                <div class="fs-4 fw-bold">@(((decimal)ViewBag.StockMinimo).ToString("N2"))</div>
+                <div class="fs-4 fw-bold">@(((decimal)ViewBag.StockMinimo).ToString("#,##0.####"))</div>
             </div></div>
         </div>
         <div class="col-md-6">
@@ -75,9 +75,9 @@
                                     <td>@m.fecha_movimiento.ToString("dd/MM/yyyy HH:mm")</td>
                                     <td><span class="badge bg-secondary">@m.tipo_movimiento</span></td>
                                     <td>@m.tipo_referencia @(m.id_referencia.HasValue ? "#" + m.id_referencia : "")</td>
-                                    <td class="text-end">@m.cantidad.ToString("N2")</td>
-                                    <td class="text-end">@m.stock_anterior.ToString("N2")</td>
-                                    <td class="text-end fw-bold">@m.stock_nuevo.ToString("N2")</td>
+                                    <td class="text-end">@m.cantidad.ToString("#,##0.####")</td>
+                                    <td class="text-end">@m.stock_anterior.ToString("#,##0.####")</td>
+                                    <td class="text-end fw-bold">@m.stock_nuevo.ToString("#,##0.####")</td>
                                     <td>@m.nombre_usuario</td>
                                     <td>@m.observaciones</td>
                                 </tr>
