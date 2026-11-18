@@ -2748,6 +2748,21 @@ BEGIN
         @UnidadesMaximasProducibles = ISNULL(MIN(UnidadesProducibles), 0)
     FROM #DetallesCosto;
 
+    -- Capacidad: las guarniciones son opcionales y de la presa a elegir cuenta la que más rinde
+    IF EXISTS (SELECT 1 FROM #DetallesCosto d INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = d.id_insumo_producto
+               WHERE ip.tipo_consumo IN ('FIJO', 'PRESA'))
+        SELECT @UnidadesMaximasProducibles = ISNULL(MIN(Unidades), 0)
+        FROM (
+            SELECT d.UnidadesProducibles AS Unidades
+            FROM #DetallesCosto d INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = d.id_insumo_producto
+            WHERE ip.tipo_consumo = 'FIJO'
+            UNION ALL
+            SELECT MAX(d.UnidadesProducibles)
+            FROM #DetallesCosto d INNER JOIN INSUMO_PRODUCTO ip ON ip.id_insumo_producto = d.id_insumo_producto
+            WHERE ip.tipo_consumo = 'PRESA'
+            HAVING COUNT(*) > 0
+        ) u;
+
     IF @TotalInsumos = 0
     BEGIN
         SELECT * FROM #DetallesCosto ORDER BY NombreInsumo;
@@ -2846,7 +2861,20 @@ BEGIN
         AND si.POLLERIA_id_polleria = @IdPolleria
     WHERE ip.PRODUCTO_id_producto = @IdProducto
         AND ip.estado = 1
-        AND i.estado = 1;
+        AND i.estado = 1
+        -- Las guarniciones son opcionales; de la presa a elegir cuenta la que más rinde
+        AND (ip.tipo_consumo = 'FIJO'
+             OR (ip.tipo_consumo = 'PRESA' AND ip.id_insumo_producto = (
+                    SELECT TOP 1 x.id_insumo_producto
+                    FROM INSUMO_PRODUCTO x
+                    LEFT JOIN STOCK_INSUMO sx ON sx.INSUMO_id_insumo = x.INSUMO_id_insumo
+                        AND sx.POLLERIA_id_polleria = @IdPolleria
+                    WHERE x.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
+                      AND x.estado = 1 AND x.tipo_consumo = 'PRESA'
+                    ORDER BY ISNULL(sx.stock_actual, 0) / NULLIF(x.cantidad_requerida, 0) DESC))
+             OR NOT EXISTS (SELECT 1 FROM INSUMO_PRODUCTO y
+                            WHERE y.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
+                              AND y.estado = 1 AND y.tipo_consumo IN ('FIJO', 'PRESA')));
 
     -- Verificar si existen insumos para el producto
     IF NOT EXISTS (SELECT 1 FROM #ValidacionStock)
