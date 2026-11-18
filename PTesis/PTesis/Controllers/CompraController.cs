@@ -658,7 +658,7 @@ namespace PTesis.Controllers
         [HttpPost]
         public JsonResult ObtenerPresentaciones(int idInsumo, int? idPresentacionActual = null)
         {
-            if (!TienePermiso("Compras"))
+            if (!TienePermiso("Compras") && !PuedeEditar("Compras"))
             {
                 return Json(new List<object>(), JsonRequestBehavior.AllowGet);
             }
