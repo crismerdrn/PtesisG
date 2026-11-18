@@ -175,10 +175,11 @@ function cargarPresentaciones(detalle) {
         const index = detalles.indexOf(detalle);
         if (index < 0 || detalle.presentaciones.length === 0) return;
 
-        let opciones = `<option value="">${detalle.abreviatura || detalle.medida}</option>`;
+        const abrev = escaparHtml(detalle.abreviatura || '');
+        let opciones = `<option value="">${abrev || escaparHtml(detalle.medida)}</option>`;
         detalle.presentaciones.forEach(function (p) {
             const sel = String(p.id) === String(detalle.IdPresentacion) ? 'selected' : '';
-            opciones += `<option value="${p.id}" ${sel}>${p.nombre} (${parseFloat(p.factor)} ${detalle.abreviatura})</option>`;
+            opciones += `<option value="${parseInt(p.id, 10)}" ${sel}>${escaparHtml(p.nombre)} (${parseFloat(p.factor)} ${abrev})</option>`;
         });
 
         const $wrap = $('#filaDetalle_' + index + ' .presentacion-wrap');
@@ -188,6 +189,10 @@ function cargarPresentaciones(detalle) {
         `);
         actualizarEquivalencia(index);
     });
+}
+
+function escaparHtml(texto) {
+    return $('<div>').text(texto == null ? '' : String(texto)).html();
 }
 
 function indiceDeFila(elemento) {
