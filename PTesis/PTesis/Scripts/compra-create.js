@@ -109,6 +109,7 @@ function seleccionarResultado(index) {
         descripcion: item.descripcion,
         medida: item.medida,
         abreviatura: item.abreviatura,
+        IdPresentacion: null,
         cantidad: 1,
         precioUnitario: item.tipo === 'PRODUCTO' ? (item.precio || 0) : 0,
         subtotal: item.tipo === 'PRODUCTO' ? (item.precio || 0) : 0
@@ -134,7 +135,7 @@ function agregarFilaDetalle(detalle, index) {
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm cantidad sin-spinners"
-                       min="0.01" step="0.01" value="${detalle.cantidad}"
+                       min="0.0001" step="any" value="${detalle.cantidad}"
                        data-index="${index}" onchange="actualizarSubtotal(${index})">
             </td>
             <td>
@@ -147,6 +148,7 @@ function agregarFilaDetalle(detalle, index) {
             </td>
             <td>
                 <span class="badge bg-light text-dark">${detalle.medida}</span>
+                <div class="presentacion-wrap"></div>
             </td>
             <td class="text-center">
                 <button type="button" class="btn btn-danger btn-sm" onclick="solicitarEliminacionDetalle(${index})">
@@ -157,6 +159,57 @@ function agregarFilaDetalle(detalle, index) {
     `;
 
     $('#cuerpoDetalles').append(fila);
+
+    if (detalle.TipoItem === 'INSUMO') {
+        cargarPresentaciones(detalle);
+    }
+}
+
+// Presentaciones de compra del insumo (ej. Quintal = 46 kg). La cantidad y el precio se ingresan
+// por presentación; el servidor convierte a la unidad del insumo para el stock.
+function cargarPresentaciones(detalle) {
+    if (!COMPRA_CONFIG.urlObtenerPresentaciones) return;
+
+    $.post(COMPRA_CONFIG.urlObtenerPresentaciones, { idInsumo: detalle.IdItemSeleccionado }, function (lista) {
+        detalle.presentaciones = lista || [];
+        const index = detalles.indexOf(detalle);
+        if (index < 0 || detalle.presentaciones.length === 0) return;
+
+        let opciones = `<option value="">${detalle.abreviatura || detalle.medida}</option>`;
+        detalle.presentaciones.forEach(function (p) {
+            const sel = String(p.id) === String(detalle.IdPresentacion) ? 'selected' : '';
+            opciones += `<option value="${p.id}" ${sel}>${p.nombre} (${parseFloat(p.factor)} ${detalle.abreviatura})</option>`;
+        });
+
+        const $wrap = $('#filaDetalle_' + index + ' .presentacion-wrap');
+        $wrap.html(`
+            <select class="form-select form-select-sm mt-1 presentacion" onchange="cambiarPresentacion(this)">${opciones}</select>
+            <small class="text-muted equivalencia"></small>
+        `);
+        actualizarEquivalencia(index);
+    });
+}
+
+function indiceDeFila(elemento) {
+    return parseInt($(elemento).closest('tr').attr('id').replace('filaDetalle_', ''), 10);
+}
+
+function cambiarPresentacion(select) {
+    const index = indiceDeFila(select);
+    detalles[index].IdPresentacion = select.value ? parseInt(select.value, 10) : null;
+    actualizarEquivalencia(index);
+}
+
+function actualizarEquivalencia(index) {
+    const detalle = detalles[index];
+    const $eq = $('#filaDetalle_' + index + ' .equivalencia');
+    const p = (detalle.presentaciones || []).find(x => String(x.id) === String(detalle.IdPresentacion));
+    if (!p) {
+        $eq.text('');
+        return;
+    }
+    const total = (parseFloat(detalle.cantidad) || 0) * parseFloat(p.factor);
+    $eq.text('= ' + parseFloat(total.toFixed(4)) + ' ' + detalle.abreviatura + ' al stock');
 }
 
 function actualizarSubtotal(index) {
@@ -169,6 +222,7 @@ function actualizarSubtotal(index) {
     detalles[index].subtotal = subtotal;
 
     $('#subtotal_' + index).text(subtotal.toFixed(2));
+    actualizarEquivalencia(index);
     actualizarTotal();
 }
 
@@ -300,6 +354,7 @@ $('#formCompra').submit(function (e) {
             const detallesParaEnviar = detalles.map(d => ({
                 IdItemSeleccionado: d.IdItemSeleccionado,
                 TipoItem: d.TipoItem,
+                IdPresentacion: d.IdPresentacion || null,
                 cantidad: d.cantidad,
                 precioUnitario: d.precioUnitario,
                 subtotal: d.subtotal

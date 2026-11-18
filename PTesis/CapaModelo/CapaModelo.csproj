@@ -75,6 +75,7 @@
     <Compile Include="CMDetalleVentaStockXML.cs" />
     <Compile Include="CMInsumo.cs" />
     <Compile Include="CMInsumoProducto.cs" />
+    <Compile Include="CMPresentacionInsumo.cs" />
     <Compile Include="CMLogin.cs" />
     <Compile Include="CMMedida.cs" />
     <Compile Include="CMMovimientoStock.cs" />

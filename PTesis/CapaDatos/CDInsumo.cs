@@ -192,5 +192,119 @@ namespace CapaDatos
 
             return insumo;
         }
+
+        public List<CMPresentacionInsumo> ListarPresentaciones(int idInsumo, bool soloActivas)
+        {
+            var lista = new List<CMPresentacionInsumo>();
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(Conexion.CN))
+                {
+                    string query = @"
+                        SELECT id_presentacion, INSUMO_id_insumo, nombre, factor, estado, fecha_registro
+                        FROM PRESENTACION_INSUMO
+                        WHERE INSUMO_id_insumo = @idInsumo AND (@soloActivas = 0 OR estado = 1)
+                        ORDER BY nombre";
+
+                    SqlCommand cmd = new SqlCommand(query, cn);
+                    cmd.Parameters.AddWithValue("@idInsumo", idInsumo);
+                    cmd.Parameters.AddWithValue("@soloActivas", soloActivas);
+                    cn.Open();
+
+                    using (SqlDataReader dr = cmd.ExecuteReader())
+                    {
+                        while (dr.Read())
+                        {
+                            lista.Add(new CMPresentacionInsumo
+                            {
+                                id_presentacion = Convert.ToInt32(dr["id_presentacion"]),
+                                INSUMO_id_insumo = Convert.ToInt32(dr["INSUMO_id_insumo"]),
+                                nombre = dr["nombre"].ToString(),
+                                factor = Convert.ToDecimal(dr["factor"]),
+                                estado = Convert.ToBoolean(dr["estado"]),
+                                fecha_registro = Convert.ToDateTime(dr["fecha_registro"])
+                            });
+                        }
+                    }
+                }
+            }
+            catch (Exception)
+            {
+                lista = new List<CMPresentacionInsumo>();
+            }
+
+            return lista;
+        }
+
+        public bool RegistrarPresentacion(CMPresentacionInsumo obj, out string Mensaje)
+        {
+            Mensaje = string.Empty;
+            string nombre = (obj.nombre ?? "").Trim();
+
+            if (nombre.Length == 0 || nombre.Length > 100)
+            {
+                Mensaje = "Ingrese el nombre de la presentación (máximo 100 caracteres).";
+                return false;
+            }
+            if (obj.factor <= 0)
+            {
+                Mensaje = "La cantidad que trae la presentación debe ser mayor a 0.";
+                return false;
+            }
+
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(Conexion.CN))
+                {
+                    string query = @"
+                        IF EXISTS (SELECT 1 FROM PRESENTACION_INSUMO WHERE INSUMO_id_insumo = @idInsumo AND nombre = @nombre)
+                            UPDATE PRESENTACION_INSUMO SET factor = @factor, estado = 1
+                            WHERE INSUMO_id_insumo = @idInsumo AND nombre = @nombre;
+                        ELSE
+                            INSERT INTO PRESENTACION_INSUMO (INSUMO_id_insumo, nombre, factor) VALUES (@idInsumo, @nombre, @factor);";
+
+                    SqlCommand cmd = new SqlCommand(query, cn);
+                    cmd.Parameters.AddWithValue("@idInsumo", obj.INSUMO_id_insumo);
+                    cmd.Parameters.AddWithValue("@nombre", nombre);
+                    cmd.Parameters.Add("@factor", SqlDbType.Decimal).Value = obj.factor;
+                    cmd.Parameters["@factor"].Precision = 12;
+                    cmd.Parameters["@factor"].Scale = 4;
+                    cn.Open();
+                    cmd.ExecuteNonQuery();
+                }
+
+                Mensaje = "Presentación guardada correctamente.";
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Mensaje = "Error al guardar la presentación: " + ex.Message;
+                return false;
+            }
+        }
+
+        public bool CambiarEstadoPresentacion(int idPresentacion, bool estado, out string Mensaje)
+        {
+            Mensaje = string.Empty;
+            try
+            {
+                using (SqlConnection cn = new SqlConnection(Conexion.CN))
+                {
+                    SqlCommand cmd = new SqlCommand(
+                        "UPDATE PRESENTACION_INSUMO SET estado = @estado WHERE id_presentacion = @id", cn);
+                    cmd.Parameters.AddWithValue("@estado", estado);
+                    cmd.Parameters.AddWithValue("@id", idPresentacion);
+                    cn.Open();
+                    bool ok = cmd.ExecuteNonQuery() > 0;
+                    Mensaje = ok ? (estado ? "Presentación activada." : "Presentación desactivada.") : "Presentación no encontrada.";
+                    return ok;
+                }
+            }
+            catch (Exception ex)
+            {
+                Mensaje = "Error al cambiar el estado de la presentación: " + ex.Message;
+                return false;
+            }
+        }
     }
 }

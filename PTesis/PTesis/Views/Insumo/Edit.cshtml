@@ -92,6 +92,80 @@
             }
         </div>
     </div>
+
+    @{
+        var presentaciones = ViewBag.Presentaciones as List<CapaModelo.CMPresentacionInsumo>;
+    }
+    @if (presentaciones != null)
+    {
+        <div class="card shadow-sm border-0 rounded-4 mt-4 mb-4">
+            <div class="card-header bg-light rounded-top-4">
+                <h5 class="mb-0"><i class="fas fa-boxes me-2"></i>Presentaciones de compra</h5>
+                <small class="text-muted">
+                    Cómo se compra este insumo y cuántos <strong>@Model.Abreviatura</strong> trae cada una
+                    (ej. Quintal = 46 kg, Racimo = 50 und, Pollo entero = 8 presas). Al comprar se elige la presentación
+                    y el stock se suma en @Model.Abreviatura.
+                </small>
+            </div>
+            <div class="card-body">
+                @using (Html.BeginForm("AgregarPresentacion", "Insumo", FormMethod.Post, new { @class = "row g-2 align-items-end mb-3" }))
+                {
+                    @Html.AntiForgeryToken()
+                    <input type="hidden" name="idInsumo" value="@Model.id_insumo" />
+                    <div class="col-md-5">
+                        <label class="form-label small mb-1" for="presNombre">Presentación</label>
+                        <input type="text" class="form-control" id="presNombre" name="nombre" maxlength="100" required placeholder="Ej: Quintal" />
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small mb-1" for="presFactor">Trae (@Model.Abreviatura)</label>
+                        <input type="number" class="form-control" id="presFactor" name="factor" min="0.0001" step="any" required placeholder="Ej: 46" />
+                    </div>
+                    <div class="col-md-3">
+                        <button type="submit" class="btn btn-primary w-100"><i class="fas fa-plus me-1"></i> Guardar</button>
+                    </div>
+                }
+
+                <table class="table table-sm table-bordered align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Presentación</th>
+                            <th class="text-end">Equivale a</th>
+                            <th class="text-center">Estado</th>
+                            <th class="text-center">Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (!presentaciones.Any())
+                        {
+                            <tr><td colspan="4" class="text-center text-muted">Sin presentaciones: se compra directamente en @Model.Abreviatura.</td></tr>
+                        }
+                        @foreach (var p in presentaciones)
+                        {
+                            <tr class="@(p.estado ? "" : "text-muted")">
+                                <td>@p.nombre</td>
+                                <td class="text-end">@p.factor.ToString("#,##0.####") @Model.Abreviatura</td>
+                                <td class="text-center">
+                                    <span class="badge @(p.estado ? "bg-success" : "bg-secondary")">@(p.estado ? "Activa" : "Inactiva")</span>
+                                </td>
+                                <td class="text-center">
+                                    @using (Html.BeginForm("CambiarEstadoPresentacion", "Insumo", FormMethod.Post))
+                                    {
+                                        @Html.AntiForgeryToken()
+                                        <input type="hidden" name="idInsumo" value="@Model.id_insumo" />
+                                        <input type="hidden" name="idPresentacion" value="@p.id_presentacion" />
+                                        <input type="hidden" name="estado" value="@(p.estado ? "false" : "true")" />
+                                        <button type="submit" class="btn btn-sm @(p.estado ? "btn-outline-danger" : "btn-outline-success")">
+                                            @(p.estado ? "Desactivar" : "Activar")
+                                        </button>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
 </div>
 
 @section JavaScript {
