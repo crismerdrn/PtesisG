@@ -39,7 +39,7 @@
                     <div class="col-md-6">
                         <label for="stock_minimo" class="form-label fw-bold">Nuevo Stock Mínimo: <span class="text-danger">*</span></label>
                         <input type="number" id="stock_minimo" name="stock_minimo" class="form-control" min="0" step="any" required
-                               value="@(((decimal)ViewBag.StockMinimo).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))" />
+                               value="@(((decimal)ViewBag.StockMinimo).ToString("0.####", System.Globalization.CultureInfo.InvariantCulture))" />
                         <div class="invalid-feedback">Ingrese un valor mayor o igual a 0.</div>
                     </div>
                 </div>
