@@ -122,7 +122,7 @@ namespace CapaDatos
             return resultado;
         }
 
-        public bool RegistrarRecetaMultiple(int idProducto, List<CMInsumoProducto> listaInsumos, out string mensaje)
+        public bool RegistrarRecetaMultiple(int idProducto, List<CMInsumoProducto> listaInsumos, out string mensaje, bool quitarOmitidos = false)
         {
             mensaje = "";
             bool resultado = false;
@@ -194,16 +194,19 @@ namespace CapaDatos
                     }
 
                     // La receta se guarda completa: lo que se quitó en pantalla queda inactivo
-                    var idsInsumos = listaInsumos.Select(i => i.INSUMO_id_insumo).Distinct().ToList();
-                    string queryDesactivar = "UPDATE INSUMO_PRODUCTO SET estado = 0, fecha_actualizacion = GETDATE() " +
-                                             "WHERE PRODUCTO_id_producto = @IdProducto AND estado = 1 AND INSUMO_id_insumo NOT IN (" +
-                                             string.Join(",", idsInsumos.Select((id, n) => "@Ins" + n)) + ")";
-                    using (SqlCommand cmdDes = new SqlCommand(queryDesactivar, cn, transaccion))
+                    if (quitarOmitidos)
                     {
-                        cmdDes.Parameters.AddWithValue("@IdProducto", idProducto);
-                        for (int n = 0; n < idsInsumos.Count; n++)
-                            cmdDes.Parameters.AddWithValue("@Ins" + n, idsInsumos[n]);
-                        cmdDes.ExecuteNonQuery();
+                        var idsInsumos = listaInsumos.Select(i => i.INSUMO_id_insumo).Distinct().ToList();
+                        string queryDesactivar = "UPDATE INSUMO_PRODUCTO SET estado = 0, fecha_actualizacion = GETDATE() " +
+                                                 "WHERE PRODUCTO_id_producto = @IdProducto AND estado = 1 AND INSUMO_id_insumo NOT IN (" +
+                                                 string.Join(",", idsInsumos.Select((id, n) => "@Ins" + n)) + ")";
+                        using (SqlCommand cmdDes = new SqlCommand(queryDesactivar, cn, transaccion))
+                        {
+                            cmdDes.Parameters.AddWithValue("@IdProducto", idProducto);
+                            for (int n = 0; n < idsInsumos.Count; n++)
+                                cmdDes.Parameters.AddWithValue("@Ins" + n, idsInsumos[n]);
+                            cmdDes.ExecuteNonQuery();
+                        }
                     }
 
                     transaccion.Commit();

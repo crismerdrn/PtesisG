@@ -129,7 +129,8 @@ namespace PTesis.Controllers
                         r.cantidad_requerida,
                         r.observaciones,
                         r.tipo_consumo
-                    }));
+                    }),
+                    new Newtonsoft.Json.JsonSerializerSettings { StringEscapeHandling = Newtonsoft.Json.StringEscapeHandling.EscapeHtml });
             }
 
             // CORREGIDO: Pasar el parámetro correctamente
@@ -869,7 +870,8 @@ namespace PTesis.Controllers
                 }
 
                 string mensaje;
-                bool ok = cdInsumoProducto.RegistrarRecetaMultiple(idProducto, listaInsumos, out mensaje);
+                bool ok = cdInsumoProducto.RegistrarRecetaMultiple(idProducto, listaInsumos, out mensaje,
+                    quitarOmitidos: PuedeEliminar("InsumosProductos"));
 
                 if (ok)
                 {
