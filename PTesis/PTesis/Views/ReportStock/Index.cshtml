@@ -107,9 +107,9 @@
                                         <td class="fw-bold">@item.NombreItem</td>
                                         <td>@item.Medida (@item.Abreviatura)</td>
                                         <td class="text-end fw-bold fs-6 @(item.StockActual <= item.StockMinimo ? "text-danger" : "text-success")">
-                                            @item.StockActual.ToString("N2") @item.Abreviatura
+                                            @item.StockActual.ToString("#,##0.####") @item.Abreviatura
                                         </td>
-                                        <td class="text-end text-muted">@item.StockMinimo.ToString("N2") @item.Abreviatura</td>
+                                        <td class="text-end text-muted">@item.StockMinimo.ToString("#,##0.####") @item.Abreviatura</td>
                                         <td class="text-center col-estado">
                                             @if (item.EstadoStock == "OPTIMO")
                                             {
@@ -162,10 +162,10 @@
                                         </td>
                                         <td class="fw-bold">@m.NombreItem</td>
                                         <td class="text-end fw-bold @(m.Cantidad < 0 ? "text-danger" : "text-success")">
-                                            @m.Cantidad.ToString("N2")
+                                            @m.Cantidad.ToString("#,##0.####")
                                         </td>
-                                        <td class="text-end text-muted">@m.StockAnterior.ToString("N2")</td>
-                                        <td class="text-end fw-bold">@m.StockNuevo.ToString("N2")</td>
+                                        <td class="text-end text-muted">@m.StockAnterior.ToString("#,##0.####")</td>
+                                        <td class="text-end fw-bold">@m.StockNuevo.ToString("#,##0.####")</td>
                                         <td class="small text-muted">@m.Observaciones</td>
                                     </tr>
                                 }

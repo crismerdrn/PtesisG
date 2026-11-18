@@ -145,8 +145,8 @@
                                 <small class="text-muted">@stock.insumo_descripcion</small>
                             </td>
                             <td class="text-center">@stock.polleria_nombre</td>
-                            <td class="text-center fw-bold">@stock.stock_actual.ToString("N2") @stock.abreviatura</td>
-                            <td class="text-center">@stock.stock_minimo.ToString("N2") @stock.abreviatura</td>
+                            <td class="text-center fw-bold">@stock.stock_actual.ToString("#,##0.####") @stock.abreviatura</td>
+                            <td class="text-center">@stock.stock_minimo.ToString("#,##0.####") @stock.abreviatura</td>
                             <td class="text-center">
                                 @if (stock.estado_stock == "NORMAL")
                                 {
