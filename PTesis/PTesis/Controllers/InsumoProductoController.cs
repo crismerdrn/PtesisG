@@ -69,13 +69,23 @@ namespace PTesis.Controllers
             }
 
             // --- LÓGICA DE PAGINACIÓN ---
-            int pageSize = 10; // Registros por página
-            int totalRegistros = lista.Count;
+            var tipos = cdInsumoProducto.ObtenerRecetaConTipo(idProducto > 0 ? idProducto : null)
+                .ToDictionary(r => r.id_insumo_producto, r => r.tipo_consumo);
+            foreach (var ip in lista)
+            {
+                string tipo;
+                if (tipos.TryGetValue(ip.id_insumo_producto, out tipo)) ip.tipo_consumo = tipo;
+            }
+
+            // Una fila por producto con toda su receta: se pagina por producto
+            var grupos = lista.GroupBy(ip => ip.PRODUCTO_id_producto).ToList();
+            int pageSize = 10; // Productos por página
+            int totalRegistros = grupos.Count;
             int totalPaginas = (int)Math.Ceiling((double)totalRegistros / pageSize);
             if (page < 1) page = 1;
             if (page > totalPaginas && totalPaginas > 0) page = totalPaginas;
 
-            var listaPaginada = lista.Skip((page - 1) * pageSize).Take(pageSize).ToList();
+            var listaPaginada = grupos.Skip((page - 1) * pageSize).Take(pageSize).SelectMany(g => g).ToList();
 
             ViewBag.PaginaActual = page;
             ViewBag.TotalPaginas = totalPaginas;
@@ -110,6 +120,16 @@ namespace PTesis.Controllers
                 model.PRODUCTO_id_producto = idProducto.Value;
                 ViewBag.NombreProducto = producto.Nombre;
                 ViewBag.ProductoActual = producto;
+                // La receta actual se carga para editarla completa
+                ViewBag.RecetaJson = Newtonsoft.Json.JsonConvert.SerializeObject(
+                    cdInsumoProducto.ObtenerRecetaConTipo(idProducto.Value).Select(r => new
+                    {
+                        r.INSUMO_id_insumo,
+                        NombreInsumo = r.NombreInsumo + " - " + r.AbreviaturaMedida,
+                        r.cantidad_requerida,
+                        r.observaciones,
+                        r.tipo_consumo
+                    }));
             }
 
             // CORREGIDO: Pasar el parámetro correctamente
@@ -839,6 +859,8 @@ namespace PTesis.Controllers
                     errorReceta = "Cada insumo de la receta debe tener una cantidad mayor a cero.";
                 else if (listaInsumos.GroupBy(i => i.INSUMO_id_insumo).Any(g => g.Count() > 1))
                     errorReceta = "Hay insumos repetidos en la receta.";
+                else if (listaInsumos.Count(i => CDInsumoProducto.NormalizarTipoConsumo(i.tipo_consumo) == "PRESA") == 1)
+                    errorReceta = "Si la presa es a elección, agregue al menos dos presas para elegir.";
 
                 if (errorReceta != null)
                 {

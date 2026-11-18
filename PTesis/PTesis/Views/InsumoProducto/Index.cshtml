@@ -92,71 +92,53 @@
                     <table class="table table-bordered table-hover align-middle mb-0" id="tablaInsumoProducto">
                         <thead class="table-light">
                             <tr>
-                                <th class="text-center" style="width: 50px;">#</th>
-                                <th style="width: 25%;">Producto</th>
-                                <th style="width: 22%;">Insumo</th>
-                                <th class="text-center" style="width: 14%;">Consumo por unidad</th>
-                                <th>Observaciones</th>
-                                <th class="text-center" style="width: 90px;">Estado</th>
-                                <th class="text-center" style="width: 140px;">Acciones</th>
+                                <th style="width: 18%;">Producto</th>
+                                <th>Siempre</th>
+                                <th>Presa a elegir</th>
+                                <th>Guarniciones a elección</th>
+                                <th class="text-center" style="width: 170px;">Acciones</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach (var item in Model)
+                            @foreach (var grupo in Model.GroupBy(ip => ip.PRODUCTO_id_producto))
                             {
+                                var primero = grupo.First();
                                 <tr>
-                                    <td class="text-center fw-bold text-muted">
-                                        #@item.id_insumo_producto
-                                    </td>
                                     <td>
-                                        <span class="fw-semibold">@item.NombreProducto</span>
+                                        <span class="fw-semibold">@primero.NombreProducto</span>
                                     </td>
-                                    <td>
-                                        <span class="fw-semibold">@item.NombreInsumo</span>
-                                    </td>
-                                    <td class="text-center">
-                                        <span class="fw-bold">@item.ConsumoPorUnidad</span>
-                                    </td>
-                                    <td>
-                                        @if (!string.IsNullOrEmpty(item.observaciones) && item.observaciones != "Sin observaciones")
-                                        {
-                                            <small class="text-secondary">@item.observaciones</small>
-                                        }
-                                        else
-                                        {
-                                            <small class="text-muted fst-italic">Sin observaciones</small>
-                                        }
-                                    </td>
-                                    <td class="text-center">
-                                        @if (item.estado)
-                                        {
-                                            <span class="badge bg-success">Activo</span>
-                                        }
-                                        else
-                                        {
-                                            <span class="badge bg-danger">Inactivo</span>
-                                        }
-                                    </td>
-                                    <td class="text-center">
-                                        <div class="btn-group" role="group">
-                                            @if (ViewBag.PuedeEditar != null && (bool)ViewBag.PuedeEditar)
+                                    @foreach (var tipo in new[] { "FIJO", "PRESA", "GUARNICION" })
+                                    {
+                                        <td>
+                                            @foreach (var item in grupo.Where(ip => (ip.tipo_consumo ?? "FIJO") == tipo))
                                             {
-                                                <a href="@Url.Action("Edit", new { id = item.id_insumo_producto, idProducto = ViewBag.IdProductoSeleccionado })"
-                                                   class="btn btn-warning btn-sm">
-                                                    Editar
-                                                </a>
+                                                <span class="badge @(item.estado ? "bg-light text-dark border" : "bg-secondary text-decoration-line-through") me-1 mb-1 p-2"
+                                                      title="@(item.estado ? "Activo" : "Inactivo")@(string.IsNullOrEmpty(item.observaciones) ? "" : " - " + item.observaciones)">
+                                                    @item.NombreInsumo: <strong>@item.ConsumoPorUnidad</strong>
+                                                    @if (ViewBag.PuedeEditar != null && (bool)ViewBag.PuedeEditar)
+                                                    {
+                                                        <a href="@Url.Action("Edit", new { id = item.id_insumo_producto, idProducto = ViewBag.IdProductoSeleccionado })"
+                                                           class="text-warning ms-1" title="Editar"><i class="fas fa-pen"></i></a>
+                                                    }
+                                                    @if (ViewBag.PuedeEliminar != null && (bool)ViewBag.PuedeEliminar)
+                                                    {
+                                                        <a href="javascript:void(0)" class="text-danger ms-1 btn-eliminar" title="Eliminar"
+                                                           data-id="@item.id_insumo_producto"
+                                                           data-insumo="@item.NombreInsumo"
+                                                           data-producto="@item.NombreProducto"><i class="fas fa-times"></i></a>
+                                                    }
+                                                </span>
                                             }
-
-                                            @if (ViewBag.PuedeEliminar != null && (bool)ViewBag.PuedeEliminar)
-                                            {
-                                                <button type="button" class="btn btn-danger btn-sm btn-eliminar ms-1"
-                                                        data-id="@item.id_insumo_producto"
-                                                        data-insumo="@item.NombreInsumo"
-                                                        data-producto="@item.NombreProducto">
-                                                    Eliminar
-                                                </button>
-                                            }
-                                        </div>
+                                        </td>
+                                    }
+                                    <td class="text-center">
+                                        @if (ViewBag.PuedeCrear != null && (bool)ViewBag.PuedeCrear)
+                                        {
+                                            <a href="@Url.Action("Create", new { idProducto = primero.PRODUCTO_id_producto })"
+                                               class="btn btn-warning btn-sm mb-1">Editar receta</a>
+                                        }
+                                        <a href="@Url.Action("CostoProduccion", new { idProducto = primero.PRODUCTO_id_producto })"
+                                           class="btn btn-outline-primary btn-sm mb-1">Costo</a>
                                     </td>
                                 </tr>
                             }
@@ -197,7 +179,7 @@
                     }
 
                     <div class="text-center text-muted small">
-                        <i class="fas fa-chart-bar me-1"></i> Mostrando <strong>@desde</strong> a <strong>@hasta</strong> de <strong>@totalRegistros</strong> asignaciones
+                        <i class="fas fa-chart-bar me-1"></i> Mostrando <strong>@desde</strong> a <strong>@hasta</strong> de <strong>@totalRegistros</strong> productos
                     </div>
                 </div>
             }

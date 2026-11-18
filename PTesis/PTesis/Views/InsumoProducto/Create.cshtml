@@ -48,12 +48,21 @@
                                     new { @class = "form-select", id = "tempInsumo" })
                             </div>
 
-                            <div class="col-md-3">
-                                <label class="form-label small fw-bold">Cantidad Requerida *</label>
-                                <input type="number" step="any" min="0.0001" class="form-control" id="tempCantidad" placeholder="Ej: 120 (gr) o 0.3 (kg)" />
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Cantidad por plato *</label>
+                                <input type="number" step="any" min="0.0001" class="form-control" id="tempCantidad" placeholder="Ej: 150" />
                             </div>
 
-                            <div class="col-md-3">
+                            <div class="col-md-2">
+                                <label class="form-label small fw-bold">Tipo *</label>
+                                <select class="form-select" id="tempTipo">
+                                    <option value="FIJO">Siempre</option>
+                                    <option value="GUARNICION">Guarnición a elección</option>
+                                    <option value="PRESA">Presa a elegir</option>
+                                </select>
+                            </div>
+
+                            <div class="col-md-2">
                                 <label class="form-label small fw-bold">Observación</label>
                                 <input type="text" class="form-control" id="tempObservacion" placeholder="Opcional" maxlength="500" />
                             </div>
@@ -74,14 +83,15 @@
                         <thead class="table-light">
                             <tr>
                                 <th>Insumo</th>
-                                <th class="text-center" style="width: 180px;">Cantidad Requerida</th>
+                                <th class="text-center" style="width: 180px;">Cantidad por plato</th>
+                                <th class="text-center" style="width: 170px;">Tipo</th>
                                 <th>Observaciones</th>
                                 <th class="text-center" style="width: 100px;">Acción</th>
                             </tr>
                         </thead>
                         <tbody id="tbodyReceta">
                             <tr id="filaVacia">
-                                <td colspan="4" class="text-center text-muted py-4">
+                                <td colspan="5" class="text-center text-muted py-4">
                                     <i class="fas fa-info-circle me-1"></i> Aún no se han agregado insumos a la receta.
                                 </td>
                             </tr>
@@ -106,7 +116,12 @@
 
 @section JavaScript {
     <script>
-        var itemsReceta = [];
+        var itemsReceta = @Html.Raw(ViewBag.RecetaJson ?? "[]");
+        var nombresTipo = { FIJO: 'Siempre', GUARNICION: 'Guarnición a elección', PRESA: 'Presa a elegir' };
+
+        function escaparHtml(texto) {
+            return $('<div>').text(texto == null ? '' : String(texto)).html();
+        }
 
         // La receta se descuenta tal cual, en la unidad del insumo (gr, ml, Un.).
         function describirConsumo(textoInsumo, cantidad) {
@@ -130,6 +145,8 @@
         }
 
         $(document).ready(function () {
+            actualizarTabla();
+
 
             // Ayuda según la medida del insumo y consumo real por unidad vendida
             $('#tempInsumo, #tempCantidad').on('change input', function () {
@@ -173,7 +190,8 @@
                     INSUMO_id_insumo: parseInt(idInsumo),
                     NombreInsumo: textoInsumo,
                     cantidad_requerida: cantidad,
-                    observaciones: observacion
+                    observaciones: observacion,
+                    tipo_consumo: $('#tempTipo').val()
                 });
 
                 actualizarTabla();
@@ -182,6 +200,7 @@
                 $('#tempCantidad').val('');
                 $('#ayudaMedida').empty();
                 $('#tempObservacion').val('');
+                $('#tempTipo').val('FIJO');
             });
 
             // Quitar ítem
@@ -206,6 +225,12 @@
                     return false;
                 }
 
+                if (itemsReceta.filter(function (i) { return i.tipo_consumo === 'PRESA'; }).length === 1) {
+                    e.preventDefault();
+                    Swal.fire('Atención', 'Si la presa es a elección, agregue al menos dos presas para elegir.', 'warning');
+                    return false;
+                }
+
                 $('#insumosJson').val(JSON.stringify(itemsReceta));
                 return true;
             });
@@ -215,15 +240,16 @@
                 tbody.empty();
 
                 if (itemsReceta.length === 0) {
-                    tbody.append('<tr id="filaVacia"><td colspan="4" class="text-center text-muted py-4"><i class="fas fa-info-circle me-1"></i> Aún no se han agregado insumos a la receta.</td></tr>');
+                    tbody.append('<tr id="filaVacia"><td colspan="5" class="text-center text-muted py-4"><i class="fas fa-info-circle me-1"></i> Aún no se han agregado insumos a la receta.</td></tr>');
                     return;
                 }
 
                 itemsReceta.forEach(function (item, index) {
                     var tr = $('<tr></tr>');
-                    tr.append('<td><strong>' + item.NombreInsumo + '</strong></td>');
-                    tr.append('<td class="text-center fw-bold">' + describirConsumo(item.NombreInsumo, item.cantidad_requerida) + '</td>');
-                    tr.append('<td>' + (item.observaciones ? item.observaciones : '<span class="text-muted fst-italic">Sin observaciones</span>') + '</td>');
+                    tr.append('<td><strong>' + escaparHtml(item.NombreInsumo) + '</strong></td>');
+                    tr.append('<td class="text-center fw-bold">' + escaparHtml(describirConsumo(item.NombreInsumo, item.cantidad_requerida)) + '</td>');
+                    tr.append('<td class="text-center">' + (nombresTipo[item.tipo_consumo] || nombresTipo.FIJO) + '</td>');
+                    tr.append('<td>' + (item.observaciones ? escaparHtml(item.observaciones) : '<span class="text-muted fst-italic">Sin observaciones</span>') + '</td>');
                     tr.append('<td class="text-center"><button type="button" class="btn btn-outline-danger btn-sm btn-quitar" data-index="' + index + '"><i class="fas fa-times me-1"></i> Quitar</button></td>');
                     tbody.append(tr);
                 });

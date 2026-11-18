@@ -193,6 +193,19 @@ namespace CapaDatos
                         }
                     }
 
+                    // La receta se guarda completa: lo que se quitó en pantalla queda inactivo
+                    var idsInsumos = listaInsumos.Select(i => i.INSUMO_id_insumo).Distinct().ToList();
+                    string queryDesactivar = "UPDATE INSUMO_PRODUCTO SET estado = 0, fecha_actualizacion = GETDATE() " +
+                                             "WHERE PRODUCTO_id_producto = @IdProducto AND estado = 1 AND INSUMO_id_insumo NOT IN (" +
+                                             string.Join(",", idsInsumos.Select((id, n) => "@Ins" + n)) + ")";
+                    using (SqlCommand cmdDes = new SqlCommand(queryDesactivar, cn, transaccion))
+                    {
+                        cmdDes.Parameters.AddWithValue("@IdProducto", idProducto);
+                        for (int n = 0; n < idsInsumos.Count; n++)
+                            cmdDes.Parameters.AddWithValue("@Ins" + n, idsInsumos[n]);
+                        cmdDes.ExecuteNonQuery();
+                    }
+
                     transaccion.Commit();
                     resultado = true;
                     mensaje = "Receta registrada exitosamente.";
@@ -416,7 +429,7 @@ namespace CapaDatos
             {
                 string query = @"
                     SELECT ip.id_insumo_producto, ip.PRODUCTO_id_producto, ip.INSUMO_id_insumo, ip.cantidad_requerida,
-                           ip.tipo_consumo, ip.estado, p.Nombre AS NombreProducto, ISNULL(p.PrecioVenta, 0) AS PrecioVenta,
+                           ip.tipo_consumo, ip.estado, ip.observaciones, p.Nombre AS NombreProducto, ISNULL(p.PrecioVenta, 0) AS PrecioVenta,
                            i.nombre AS NombreInsumo, ISNULL(m.Descripcion, '') AS Medida, ISNULL(m.Abreviatura, '') AS Abreviatura
                     FROM INSUMO_PRODUCTO ip
                     INNER JOIN PRODUCTO p ON p.id_producto = ip.PRODUCTO_id_producto
@@ -441,6 +454,7 @@ namespace CapaDatos
                             cantidad_requerida = Convert.ToDecimal(dr["cantidad_requerida"]),
                             tipo_consumo = dr["tipo_consumo"].ToString(),
                             estado = Convert.ToBoolean(dr["estado"]),
+                            observaciones = dr["observaciones"] == DBNull.Value ? "" : dr["observaciones"].ToString(),
                             NombreProducto = dr["NombreProducto"].ToString(),
                             PrecioVentaProducto = Convert.ToDecimal(dr["PrecioVenta"]),
                             NombreInsumo = dr["NombreInsumo"].ToString(),
