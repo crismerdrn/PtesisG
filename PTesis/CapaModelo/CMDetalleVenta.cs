@@ -29,6 +29,9 @@ namespace CapaModelo
         [Required(ErrorMessage = "El producto es obligatorio")]
         public int PRODUCTO_id_producto { get; set; }
 
+        // Ids de INSUMO_PRODUCTO elegidos al vender (guarniciones y presa), separados por coma
+        public string Opciones { get; set; }
+
         // Datos del producto
         [StringLength(150)]
         public string NombreProducto { get; set; }
