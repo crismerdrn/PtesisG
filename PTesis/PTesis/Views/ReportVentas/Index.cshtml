@@ -81,8 +81,8 @@
                     <input type="date" name="fechaFin" class="form-control form-control-sm" value="@ViewBag.FechaFin" />
                 </div>
                 <div class="col-lg-3 col-md-3">
-                    <label class="form-label small fw-bold mb-1">Canal de Venta</label>
-                    @Html.DropDownList("idTipoVenta", (SelectList)ViewBag.ListaCanales, "TODOS LOS CANALES", new { @class = "form-select form-select-sm" })
+                    <label class="form-label small fw-bold mb-1">Tipo de Venta</label>
+                    @Html.DropDownList("idTipoVenta", (SelectList)ViewBag.ListaCanales, "TODOS LOS TIPOS", new { @class = "form-select form-select-sm" })
                 </div>
                 <div class="col-lg-3 col-md-3">
                     <label class="form-label small fw-bold mb-1">Forma de Pago</label>
@@ -111,7 +111,7 @@
                             <th style="width: 16%;">Fecha y Hora</th>
                             <th>Cliente</th>
                             <th>Vendedor</th>
-                            <th style="width: 11%;">Canal</th>
+                            <th style="width: 11%;">Tipo</th>
                             <th style="width: 11%;">Forma Pago</th>
                             <th class="text-center" style="width: 9%;">Cant.</th>
                             <th class="text-end" style="width: 14%;">Total</th>

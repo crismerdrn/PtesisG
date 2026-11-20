@@ -63,9 +63,9 @@
                             new { @class = "form-select", id = "TipoPagoSelect", required = "required" })
                     </div>
 
-                    <!-- Canal de Venta -->
+                    <!-- Tipo de Venta -->
                     <div class="col-md-4">
-                        <label class="form-label fw-bold small text-secondary">Tipo de Venta (Canal) *</label>
+                        <label class="form-label fw-bold small text-secondary">Tipo de Venta *</label>
                         @Html.DropDownListFor(m => m.TIPO_VENTA_id_tipoVenta,
                             ViewBag.ListaCanalesVenta as SelectList,
                             new { @class = "form-select", id = "TipoVentaSelect", required = "required" })

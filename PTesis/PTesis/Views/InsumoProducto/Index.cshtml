@@ -135,10 +135,10 @@
                                         @if (ViewBag.PuedeCrear != null && (bool)ViewBag.PuedeCrear)
                                         {
                                             <a href="@Url.Action("Create", new { idProducto = primero.PRODUCTO_id_producto })"
-                                               class="btn btn-warning btn-sm mb-1">Editar receta</a>
+                                               class="btn btn-warning btn-sm w-100 mb-1">Editar receta</a>
                                         }
                                         <a href="@Url.Action("CostoProduccion", new { idProducto = primero.PRODUCTO_id_producto })"
-                                           class="btn btn-outline-primary btn-sm mb-1">Costo</a>
+                                           class="btn btn-primary btn-sm w-100 mb-1">Costo</a>
                                     </td>
                                 </tr>
                             }

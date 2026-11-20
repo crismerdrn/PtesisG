@@ -241,13 +241,25 @@ namespace PTesis.Controllers
             // Necesitarías un método similar para obtener stock de insumo por ID
             // Por ahora uso una aproximación
             var listaInsumos = cdStock.ListarStockInsumos();
+
+            // Sin insumo elegido (botón superior "Ajustar Stock"): primero se elige el insumo
+            if (id <= 0)
+            {
+                ViewBag.ListaStockInsumos = listaInsumos
+                    .OrderBy(x => x.insumo_nombre).ThenBy(x => x.polleria_nombre)
+                    .Select(x => new SelectListItem
+                    {
+                        Value = x.id_stock_insumo.ToString(),
+                        Text = x.insumo_nombre + " - " + x.polleria_nombre + " (" + x.stock_actual.ToString("#,##0.####") + " " + x.abreviatura + ")"
+                    }).ToList();
+                return View(new CMStockAjuste { tipo_item = "INSUMO" });
+            }
+
             var stockInsumo = listaInsumos.FirstOrDefault(x => x.id_stock_insumo == id);
 
             if (stockInsumo == null)
             {
-                TempData["Error"] = id <= 0
-                    ? "Seleccione en la tabla el insumo que desea ajustar."
-                    : "Registro de stock no encontrado.";
+                TempData["Error"] = "Registro de stock no encontrado.";
                 return RedirectToAction("Insumos");
             }
 
