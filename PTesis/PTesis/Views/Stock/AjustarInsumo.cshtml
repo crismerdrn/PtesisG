@@ -10,7 +10,28 @@
         <p class="text-muted">Ajuste manual del inventario de insumos</p>
     </div>
 
-    @using (Html.BeginForm("AjustarInsumo", "Stock", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
+    @if (Model.id_item == 0)
+    {
+        <div class="card shadow-sm border-0 mb-4">
+            <div class="card-body">
+                <label for="selectorInsumo" class="form-label fw-bold">Seleccione el insumo a ajustar:</label>
+                <select id="selectorInsumo" class="form-select"
+                        onchange="if (this.value) window.location = '@Url.Action("AjustarInsumo", "Stock")?id=' + this.value;">
+                    <option value="">-- Seleccione --</option>
+                    @foreach (var item in (List<SelectListItem>)ViewBag.ListaStockInsumos)
+                    {
+                        <option value="@item.Value">@item.Text</option>
+                    }
+                </select>
+                <a href="@Url.Action("Insumos", "Stock")" class="btn btn-secondary mt-3">
+                    <i class="fas fa-times me-2"></i>Cancelar
+                </a>
+            </div>
+        </div>
+    }
+    else
+    {
+    using (Html.BeginForm("AjustarInsumo", "Stock", FormMethod.Post, new { @class = "needs-validation", novalidate = "novalidate" }))
     {
         @Html.AntiForgeryToken()
 
@@ -124,6 +145,7 @@
                 </div>
             </div>
         </div>
+    }
     }
 </div>
 

@@ -134,6 +134,8 @@ namespace PTesis.Controllers
             {
                 ViewBag.PolleriasTrabajo = ObtenerPolleriasActivas();
                 ViewBag.PolleriaTrabajo = ObtenerPolleriaActiva();
+                if (ViewBag.UsuarioNombre == null)
+                    ViewBag.UsuarioNombre = ((UsuarioSesion.nombre ?? "") + " " + (UsuarioSesion.apellido ?? "")).Trim();
             }
             base.OnResultExecuting(filterContext);
         }
