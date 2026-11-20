@@ -1700,8 +1700,9 @@ GO
 -- cantidad queda en la unidad del insumo (2 qq = 92 kg) y precioUnitario por esa unidad (368 Bs/qq = 8 Bs/kg).
 IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DETALLE_COMPRA') AND name = 'cantidad' AND scale < 4)
     ALTER TABLE dbo.DETALLE_COMPRA ALTER COLUMN cantidad DECIMAL(12,4) NOT NULL;
-IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DETALLE_COMPRA') AND name = 'precioUnitario' AND scale < 4)
-    ALTER TABLE dbo.DETALLE_COMPRA ALTER COLUMN precioUnitario DECIMAL(12,4) NOT NULL;
+-- 6 decimales: con unidades chicas el precio por gramo es muy pequeño (Bs 25/@ = Bs 0.002174/gr).
+IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id = OBJECT_ID('dbo.DETALLE_COMPRA') AND name = 'precioUnitario' AND scale < 6)
+    ALTER TABLE dbo.DETALLE_COMPRA ALTER COLUMN precioUnitario DECIMAL(18,6) NOT NULL;
 GO
 
 CREATE OR ALTER PROCEDURE [dbo].[sp_Compra_Registrar]
@@ -1731,7 +1732,7 @@ BEGIN
         IdPresentacion INT NULL,
         CantidadPresentacion DECIMAL(12,4) NULL,
         Cantidad DECIMAL(12,4),
-        PrecioUnitario DECIMAL(12,4),
+        PrecioUnitario DECIMAL(18,6),
         Subtotal DECIMAL(10,2)
     );
 
@@ -3015,7 +3016,7 @@ BEGIN
         IdPresentacion INT NULL,
         CantidadPresentacion DECIMAL(12,4) NULL,
         Cantidad DECIMAL(12,4),
-        PrecioUnitario DECIMAL(12,4),
+        PrecioUnitario DECIMAL(18,6),
         Subtotal DECIMAL(10,2)
     );
 
