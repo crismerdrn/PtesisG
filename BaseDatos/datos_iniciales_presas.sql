@@ -4,6 +4,9 @@
 -- de compra "Pollo entero": 1 pollo = 2 pechos + 2 alas + 2 piernas + 2 contrapiernas.
 -- Ejecutar después de correcciones_proyecto_grado.sql.
 -- ============================================================================
+USE proyecto_grado;
+GO
+
 SET NOCOUNT ON;
 
 DECLARE @IdUnidad INT = (SELECT TOP 1 id_medida FROM MEDIDAS
