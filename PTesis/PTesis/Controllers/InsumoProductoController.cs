@@ -869,9 +869,20 @@ namespace PTesis.Controllers
                     return RedirectToAction("Create", new { idProducto = idProducto });
                 }
 
+                bool puedeQuitar = PuedeEliminar("InsumosProductos");
+                if (!puedeQuitar)
+                {
+                    var idsEnviados = listaInsumos.Select(i => i.INSUMO_id_insumo).ToList();
+                    if (cdInsumoProducto.ObtenerRecetaConTipo(idProducto).Any(r => !idsEnviados.Contains(r.INSUMO_id_insumo)))
+                    {
+                        TempData["Error"] = "No tiene permiso para quitar insumos de la receta.";
+                        return RedirectToAction("Create", new { idProducto = idProducto });
+                    }
+                }
+
                 string mensaje;
                 bool ok = cdInsumoProducto.RegistrarRecetaMultiple(idProducto, listaInsumos, out mensaje,
-                    quitarOmitidos: PuedeEliminar("InsumosProductos"));
+                    quitarOmitidos: puedeQuitar);
 
                 if (ok)
                 {
