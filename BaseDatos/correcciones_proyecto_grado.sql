@@ -2867,6 +2867,7 @@ BEGIN
              OR (ip.tipo_consumo = 'PRESA' AND ip.id_insumo_producto = (
                     SELECT TOP 1 x.id_insumo_producto
                     FROM INSUMO_PRODUCTO x
+                    INNER JOIN INSUMO ix ON ix.id_insumo = x.INSUMO_id_insumo AND ix.estado = 1
                     LEFT JOIN STOCK_INSUMO sx ON sx.INSUMO_id_insumo = x.INSUMO_id_insumo
                         AND sx.POLLERIA_id_polleria = @IdPolleria
                     WHERE x.PRODUCTO_id_producto = ip.PRODUCTO_id_producto
