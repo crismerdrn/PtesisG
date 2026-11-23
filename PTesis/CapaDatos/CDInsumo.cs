@@ -201,10 +201,17 @@ namespace CapaDatos
                 using (SqlConnection cn = new SqlConnection(Conexion.CN))
                 {
                     string query = @"
-                        SELECT id_presentacion, INSUMO_id_insumo, nombre, factor, estado, fecha_registro
-                        FROM PRESENTACION_INSUMO
-                        WHERE INSUMO_id_insumo = @idInsumo AND (@soloActivas = 0 OR estado = 1)
-                        ORDER BY nombre";
+                        SELECT pi.id_presentacion, pi.INSUMO_id_insumo, pi.nombre, pi.factor, pi.estado, pi.fecha_registro,
+                               CASE WHEN OBJECT_ID('dbo.PRESENTACION_COMPONENTE') IS NULL THEN NULL ELSE
+                                   STUFF((SELECT ', ' + CAST(CAST(pc.factor AS FLOAT) AS VARCHAR(20)) + ' ' + i.nombre
+                                          FROM PRESENTACION_COMPONENTE pc
+                                          INNER JOIN INSUMO i ON i.id_insumo = pc.INSUMO_id_insumo
+                                          WHERE pc.PRESENTACION_id_presentacion = pi.id_presentacion
+                                          ORDER BY i.nombre
+                                          FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') END AS componentes
+                        FROM PRESENTACION_INSUMO pi
+                        WHERE pi.INSUMO_id_insumo = @idInsumo AND (@soloActivas = 0 OR pi.estado = 1)
+                        ORDER BY pi.nombre";
 
                     SqlCommand cmd = new SqlCommand(query, cn);
                     cmd.Parameters.AddWithValue("@idInsumo", idInsumo);
@@ -221,6 +228,7 @@ namespace CapaDatos
                                 INSUMO_id_insumo = Convert.ToInt32(dr["INSUMO_id_insumo"]),
                                 nombre = dr["nombre"].ToString(),
                                 factor = Convert.ToDecimal(dr["factor"]),
+                                componentes = dr["componentes"] == DBNull.Value ? null : dr["componentes"].ToString(),
                                 estado = Convert.ToBoolean(dr["estado"]),
                                 fecha_registro = Convert.ToDateTime(dr["fecha_registro"])
                             });

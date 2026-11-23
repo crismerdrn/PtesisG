@@ -687,7 +687,7 @@ namespace PTesis.Controllers
             // Incluye la presentación ya usada en la compra aunque luego se haya desactivado.
             var presentaciones = cdInsumo.ListarPresentaciones(idInsumo, false)
                 .Where(p => p.estado || p.id_presentacion == idPresentacionActual)
-                .Select(p => new { id = p.id_presentacion, nombre = p.nombre, factor = p.factor })
+                .Select(p => new { id = p.id_presentacion, nombre = p.nombre, factor = p.factor, componentes = p.componentes })
                 .ToList();
 
             return Json(presentaciones, JsonRequestBehavior.AllowGet);

@@ -173,8 +173,33 @@
                         @if (Model.Detalles != null && Model.Detalles.Any())
                         {
                             var contador = 1;
-                            foreach (var detalle in Model.Detalles)
+                            // Las líneas que agregó una presentación con varios insumos (pollo entero -> presas)
+                            // se muestran juntas en la línea que se compró.
+                            var lineas = new List<CapaModelo.CMDetalleCompra>();
+                            var componentesDe = new Dictionary<CapaModelo.CMDetalleCompra, List<CapaModelo.CMDetalleCompra>>();
+                            var principalPorPresentacion = new Dictionary<int, CapaModelo.CMDetalleCompra>();
+                            foreach (var d in Model.Detalles)
                             {
+                                CapaModelo.CMDetalleCompra principal = null;
+                                if (d.IdPresentacion.HasValue
+                                    && principalPorPresentacion.TryGetValue(d.IdPresentacion.Value, out principal)
+                                    && principal.INSUMO_id_insumo != d.INSUMO_id_insumo)
+                                {
+                                    componentesDe[principal].Add(d);
+                                    continue;
+                                }
+                                lineas.Add(d);
+                                componentesDe[d] = new List<CapaModelo.CMDetalleCompra>();
+                                if (d.IdPresentacion.HasValue)
+                                {
+                                    principalPorPresentacion[d.IdPresentacion.Value] = d;
+                                }
+                            }
+                            foreach (var detalle in lineas)
+                            {
+                                var componentes = componentesDe[detalle];
+                                var subtotalLinea = detalle.subtotal + componentes.Sum(c => c.subtotal);
+                                var precioLinea = detalle.cantidad_presentacion > 0 ? subtotalLinea / detalle.cantidad_presentacion.Value : detalle.precioUnitario;
                                 <tr>
                                     <td class="text-center">@contador</td>
                                     <td>
@@ -192,15 +217,24 @@
                                     <td class="text-center fw-bold">
                                         @if (detalle.cantidad_presentacion.HasValue)
                                         {
-                                            @detalle.cantidad_presentacion.Value.ToString("#,##0.####") @(" " + detalle.NombrePresentacion)<br /><small class="text-muted">(@detalle.cantidad.ToString("#,##0.####") @detalle.AbreviaturaMedida)</small>
+                                            @detalle.cantidad_presentacion.Value.ToString("#,##0.####") @(" " + detalle.NombrePresentacion)<br />
+                                            <small class="text-muted fw-normal">
+                                                (@detalle.cantidad.ToString("#,##0.####") @detalle.AbreviaturaMedida @detalle.NombreItem@foreach (var c in componentes){<text> + @c.cantidad.ToString("#,##0.####") @c.NombreItem</text>})
+                                            </small>
                                         }
                                         else
                                         {
                                             @detalle.cantidad.ToString("#,##0.####")
                                         }
                                     </td>
-                                    <td class="text-end">Bs. @detalle.precioUnitario.ToString("0.00")</td>
-                                    <td class="text-end fw-bold">Bs. @detalle.subtotal.ToString("0.00")</td>
+                                    <td class="text-end">
+                                        Bs. @precioLinea.ToString("0.00")
+                                        @if (detalle.cantidad_presentacion.HasValue)
+                                        {
+                                            <br /><small class="text-muted">por @detalle.NombrePresentacion</small>
+                                        }
+                                    </td>
+                                    <td class="text-end fw-bold">Bs. @subtotalLinea.ToString("0.00")</td>
                                     <td class="text-center">
                                         <span class="badge bg-light text-dark border">@detalle.MedidaItem</span>
                                     </td>

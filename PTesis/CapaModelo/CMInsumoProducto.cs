@@ -111,6 +111,7 @@ namespace CapaModelo
         public decimal? StockActual { get; set; }
         public int? UnidadesProducibles { get; set; }
         public decimal PorcentajeCosto { get; set; }
+        public string tipo_consumo { get; set; } = "FIJO";
     }
 
     public class CMValidacionStocks

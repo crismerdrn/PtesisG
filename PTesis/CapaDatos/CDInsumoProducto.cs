@@ -547,7 +547,32 @@ namespace CapaDatos
                 }
             }
 
+            CompletarTipoConsumo(idProducto, detalles);
             return Tuple.Create(resumen, detalles);
+        }
+
+        private static void CompletarTipoConsumo(int idProducto, List<CMDetalleCostoProduccion> detalles)
+        {
+            if (detalles.Count == 0) return;
+
+            var tipos = new Dictionary<int, string>();
+            using (SqlConnection cn = new SqlConnection(Conexion.CN))
+            using (SqlCommand cmd = new SqlCommand("SELECT id_insumo_producto, tipo_consumo FROM INSUMO_PRODUCTO WHERE PRODUCTO_id_producto = @id", cn))
+            {
+                cmd.Parameters.AddWithValue("@id", idProducto);
+                cn.Open();
+                using (SqlDataReader dr = cmd.ExecuteReader())
+                {
+                    while (dr.Read())
+                        tipos[Convert.ToInt32(dr["id_insumo_producto"])] = NormalizarTipoConsumo(dr["tipo_consumo"].ToString());
+                }
+            }
+
+            foreach (var d in detalles)
+            {
+                string tipo;
+                if (tipos.TryGetValue(d.id_insumo_producto, out tipo)) d.tipo_consumo = tipo;
+            }
         }
 
         public Tuple<bool, string, int, List<CMValidacionStocks>, CMResumenValidacionStock> ValidarStockProduccion(
