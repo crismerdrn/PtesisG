@@ -22,7 +22,7 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewBag.PuedeCrear = TienePermiso("InsumosProductos");
+            ViewBag.PuedeCrear = PuedeCrear("InsumosProductos");
             ViewBag.PuedeEditar = PuedeEditar("InsumosProductos");
             ViewBag.PuedeEliminar = PuedeEliminar("InsumosProductos");
 
@@ -100,7 +100,7 @@ namespace PTesis.Controllers
         [HttpGet]
         public ActionResult Create(int? idProducto)
         {
-            if (!TienePermiso("InsumosProductos"))
+            if (!PuedeCrear("InsumosProductos"))
             {
                 TempData["Error"] = "No tiene permisos para crear relaciones insumo-producto.";
                 return RedirectToAction("Index");
@@ -144,7 +144,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                if (!TienePermiso("InsumosProductos"))
+                if (!PuedeCrear("InsumosProductos"))
                 {
                     TempData["Error"] = "No tiene permisos para crear relaciones insumo-producto.";
                     return RedirectToAction("Index");
@@ -249,7 +249,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                if (!TienePermiso("InsumosProductos"))
+                if (!PuedeCrear("InsumosProductos"))
                 {
                     TempData["Error"] = "No tiene permisos para reactivar relaciones.";
                     return RedirectToAction("Index");
@@ -827,7 +827,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                if (!TienePermiso("InsumosProductos"))
+                if (!PuedeCrear("InsumosProductos"))
                 {
                     TempData["Error"] = "No tiene permisos para crear relaciones insumo-producto.";
                     return RedirectToAction("Index");
