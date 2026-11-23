@@ -491,7 +491,11 @@
             if (!nombre) return;
             const telefono = prompt('Teléfono o Celular:', '0000000');
 
-            $.post('@Url.Action("CrearClienteRapido", "Venta")', { nombre: nombre, telefono: telefono }, function (res) {
+            $.post('@Url.Action("CrearClienteRapido", "Venta")', {
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                nombre: nombre,
+                telefono: telefono
+            }, function (res) {
                 if (res.success) {
                     const $select = $('#ClienteSelect');
                     $select.find('option[value="' + res.cliente.id + '"]').remove();

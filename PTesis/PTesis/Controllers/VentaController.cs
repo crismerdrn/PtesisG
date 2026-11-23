@@ -877,6 +877,7 @@ namespace PTesis.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
         public JsonResult CrearClienteRapido(string nombre, string telefono)
         {
             if (!TienePermiso("Ventas") && !PuedeCrear("Clientes"))
