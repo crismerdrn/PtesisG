@@ -200,15 +200,20 @@ namespace CapaDatos
             {
                 using (SqlConnection cn = new SqlConnection(Conexion.CN))
                 {
+                    cn.Open();
+                    // PRESENTACION_COMPONENTE la crea correcciones_proyecto_grado.sql; sin ella no hay componentes.
+                    bool hayComponentes = new SqlCommand("SELECT OBJECT_ID('dbo.PRESENTACION_COMPONENTE')", cn).ExecuteScalar() != DBNull.Value;
+                    string componentesSql = hayComponentes ? @"
+                               STUFF((SELECT ', ' + CAST(CAST(pc.factor AS FLOAT) AS VARCHAR(20)) + ' ' + i.nombre
+                                      FROM PRESENTACION_COMPONENTE pc
+                                      INNER JOIN INSUMO i ON i.id_insumo = pc.INSUMO_id_insumo
+                                      WHERE pc.PRESENTACION_id_presentacion = pi.id_presentacion
+                                      ORDER BY i.nombre
+                                      FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '')" : "CAST(NULL AS NVARCHAR(MAX))";
+
                     string query = @"
                         SELECT pi.id_presentacion, pi.INSUMO_id_insumo, pi.nombre, pi.factor, pi.estado, pi.fecha_registro,
-                               CASE WHEN OBJECT_ID('dbo.PRESENTACION_COMPONENTE') IS NULL THEN NULL ELSE
-                                   STUFF((SELECT ', ' + CAST(CAST(pc.factor AS FLOAT) AS VARCHAR(20)) + ' ' + i.nombre
-                                          FROM PRESENTACION_COMPONENTE pc
-                                          INNER JOIN INSUMO i ON i.id_insumo = pc.INSUMO_id_insumo
-                                          WHERE pc.PRESENTACION_id_presentacion = pi.id_presentacion
-                                          ORDER BY i.nombre
-                                          FOR XML PATH(''), TYPE).value('.', 'NVARCHAR(MAX)'), 1, 2, '') END AS componentes
+                               " + componentesSql + @" AS componentes
                         FROM PRESENTACION_INSUMO pi
                         WHERE pi.INSUMO_id_insumo = @idInsumo AND (@soloActivas = 0 OR pi.estado = 1)
                         ORDER BY pi.nombre";
@@ -216,7 +221,6 @@ namespace CapaDatos
                     SqlCommand cmd = new SqlCommand(query, cn);
                     cmd.Parameters.AddWithValue("@idInsumo", idInsumo);
                     cmd.Parameters.AddWithValue("@soloActivas", soloActivas);
-                    cn.Open();
 
                     using (SqlDataReader dr = cmd.ExecuteReader())
                     {
