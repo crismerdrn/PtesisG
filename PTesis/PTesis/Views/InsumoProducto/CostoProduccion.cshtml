@@ -97,7 +97,17 @@
                         @foreach (var item in detalles)
                         {
                             <tr>
-                                <td class="fw-semibold">@item.NombreInsumo</td>
+                                <td class="fw-semibold">
+                                    @item.NombreInsumo
+                                    @if (item.tipo_consumo == "GUARNICION")
+                                    {
+                                        <span class="badge bg-info text-dark ms-1" title="Se descuenta solo si se marca al vender">Guarnición opcional</span>
+                                    }
+                                    else if (item.tipo_consumo == "PRESA")
+                                    {
+                                        <span class="badge bg-warning text-dark ms-1" title="Se descuenta solo la presa elegida">Presa a elegir</span>
+                                    }
+                                </td>
                                 <td class="text-center">
                                     <span class="fw-bold">@CapaModelo.CMInsumoProducto.FormatearConsumo(item.cantidad_requerida, item.AbreviaturaMedida, item.MedidaInsumo)</span>
                                 </td>
@@ -113,6 +123,10 @@
                                     <span class="fw-bold @((item.UnidadesProducibles ?? 0) <= 20 ? "text-danger" : "text-success")">
                                         @(item.UnidadesProducibles ?? 0) platos
                                     </span>
+                                    @if (item.tipo_consumo == "GUARNICION" && (item.UnidadesProducibles ?? 0) == 0)
+                                    {
+                                        <br /><small class="text-danger">Sin stock: desmarcar al vender</small>
+                                    }
                                 </td>
                             </tr>
                         }
@@ -121,7 +135,7 @@
                         <tr>
                             <td colspan="4" class="text-end">Costo Total de Producción:</td>
                             <td class="text-end text-danger fs-6">Bs. @Model.CostoTotalProduccion.ToString("N2")</td>
-                            <td class="text-end">Límite Producción:</td>
+                            <td class="text-end">Límite Producción:<br /><small class="text-muted fw-normal">sin contar guarniciones</small></td>
                             <td class="text-center text-primary fs-6">@(Model.UnidadesMaximasProducibles ?? 0) platos</td>
                         </tr>
                     </tfoot>

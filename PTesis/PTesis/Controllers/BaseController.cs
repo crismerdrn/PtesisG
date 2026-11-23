@@ -30,6 +30,48 @@ namespace PTesis.Controllers
             get { return null; }
         }
 
+        // Los controladores usan claves internas; la matriz de permisos guarda el nombre visible del submenú.
+        private static readonly Dictionary<string, string[]> AliasModulos = new Dictionary<string, string[]>
+        {
+            { "Pollerias", new[] { "Pollería", "Polleria" } },
+            { "InsumosProductos", new[] { "Insumo de Producto", "InsumoProducto" } },
+            { "Stock", new[] { "Stock General", "StockGeneral" } },
+            { "Reportes", new[] { "Reporte de Ventas", "Reporte de Compras", "Reporte de Stock", "ReporteVentas", "ReporteCompras", "ReporteStock" } },
+            { "TipoPago", new[] { "Tipo de Pago" } },
+            { "TipoProducto", new[] { "Tipo de Producto" } },
+            { "Usuario", new[] { "Usuarios" } },
+            { "Compras", new[] { "Compra" } },
+            { "Ventas", new[] { "Venta" } }
+        };
+
+        // Acciones de Stock sin fila propia en la matriz: se derivan de los permisos de Stock General.
+        private static readonly Dictionary<string, string> PermisosStockLectura = new Dictionary<string, string>
+        {
+            { "Stock_Historial", "Stock" }
+        };
+
+        private static readonly Dictionary<string, string> PermisosStockEdicion = new Dictionary<string, string>
+        {
+            { "Stock_Ajustar", "Stock" },
+            { "Stock_Configurar", "Stock" },
+            { "Stock_Transferir", "Stock" }
+        };
+
+        private static IEnumerable<string> NombresModulo(string modulo)
+        {
+            yield return modulo;
+            string[] alias;
+            if (AliasModulos.TryGetValue(modulo, out alias))
+            {
+                foreach (var a in alias) yield return a;
+            }
+        }
+
+        private bool TieneAlguno(string modulo, params string[] prefijos)
+        {
+            return NombresModulo(modulo).Any(nombre => prefijos.Any(prefijo => UsuarioSesion.TienePermiso(prefijo + nombre)));
+        }
+
         protected bool TienePermiso(string nombreMenu)
         {
             if (UsuarioSesion == null) return false;
@@ -37,15 +79,13 @@ namespace PTesis.Controllers
 
             if (UsuarioSesion.TienePermiso(nombreMenu)) return true;
 
-            if (UsuarioSesion.TienePermiso("Ver " + nombreMenu) ||
-                UsuarioSesion.TienePermiso("Agregar " + nombreMenu) ||
-                UsuarioSesion.TienePermiso("Crear " + nombreMenu) ||
-                UsuarioSesion.TienePermiso("Editar " + nombreMenu))
-            {
-                return true;
-            }
+            string moduloBase;
+            if (PermisosStockLectura.TryGetValue(nombreMenu, out moduloBase))
+                return TienePermiso(moduloBase) || TieneAlguno("Reporte de Stock", "", "Ver ");
+            if (PermisosStockEdicion.TryGetValue(nombreMenu, out moduloBase))
+                return PuedeEditar(moduloBase);
 
-            return false;
+            return TieneAlguno(nombreMenu, "", "Ver ", "Agregar ", "Crear ", "Editar ");
         }
 
         protected bool PuedeCrear(string modulo)
@@ -53,8 +93,7 @@ namespace PTesis.Controllers
             if (UsuarioSesion == null) return false;
             if (EsAdmin) return true;
 
-            return UsuarioSesion.TienePermiso("Agregar " + modulo) ||
-                   UsuarioSesion.TienePermiso("Crear " + modulo);
+            return TieneAlguno(modulo, "Agregar ", "Crear ");
         }
 
         /// <summary>
@@ -65,7 +104,7 @@ namespace PTesis.Controllers
             if (UsuarioSesion == null) return false;
             if (EsAdmin) return true;
 
-            if (UsuarioSesion.TienePermiso("Editar " + modulo) || UsuarioSesion.TienePermiso("Modificar " + modulo))
+            if (TieneAlguno(modulo, "Editar ", "Modificar "))
                 return true;
 
             return UsuarioSesion.PuedeEditar(modulo);
@@ -79,7 +118,7 @@ namespace PTesis.Controllers
             if (UsuarioSesion == null) return false;
             if (EsAdmin) return true;
 
-            if (UsuarioSesion.TienePermiso("Eliminar " + modulo) || UsuarioSesion.TienePermiso("Borrar " + modulo))
+            if (TieneAlguno(modulo, "Eliminar ", "Borrar "))
                 return true;
 
             return UsuarioSesion.PuedeEliminar(modulo);

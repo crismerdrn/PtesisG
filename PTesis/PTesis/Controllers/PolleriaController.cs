@@ -20,7 +20,7 @@ namespace PTesis.Controllers
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewBag.PuedeCrear = TienePermiso("Pollerias");
+            ViewBag.PuedeCrear = PuedeCrear("Pollerias");
             ViewBag.PuedeEditar = PuedeEditar("Pollerias");
             ViewBag.PuedeEliminar = PuedeEliminar("Pollerias");
 
@@ -52,7 +52,7 @@ namespace PTesis.Controllers
         // GET: Polleria/Create
         public ActionResult Create()
         {
-            if (!TienePermiso("Pollerias"))
+            if (!PuedeCrear("Pollerias"))
             {
                 TempData["Error"] = "No tiene permisos para registrar pollerías.";
                 return RedirectToAction("Index");
@@ -68,7 +68,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                if (!TienePermiso("Pollerias"))
+                if (!PuedeCrear("Pollerias"))
                 {
                     TempData["Error"] = "No tiene permisos para registrar pollerías.";
                     return RedirectToAction("Index");

@@ -226,7 +226,7 @@
             idPolleria: parseInt('@(ViewBag.IdPolleria ?? 0)', 10) || 0
         };
     </script>
-    <script src="~/Scripts/compra-create.js"></script>
+    <script src="~/Scripts/compra-create.js?v=@DateTime.Now.Ticks"></script>
 }
 
 @section Styles {

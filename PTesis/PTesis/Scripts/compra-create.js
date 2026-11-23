@@ -136,22 +136,22 @@ function agregarFilaDetalle(detalle, index) {
             <td>
                 <input type="number" class="form-control form-control-sm cantidad sin-spinners"
                        min="0.0001" step="any" value="${detalle.cantidad}"
-                       data-index="${index}" onchange="actualizarSubtotal(${index})">
+                       oninput="actualizarSubtotal(indiceDeFila(this))" onchange="actualizarSubtotal(indiceDeFila(this))">
             </td>
             <td>
                 <input type="number" class="form-control form-control-sm precio sin-spinners"
                        min="0" step="0.01" value="${parseFloat(detalle.precioUnitario).toFixed(2)}"
-                       data-index="${index}" onchange="actualizarSubtotal(${index})">
+                       oninput="actualizarSubtotal(indiceDeFila(this))" onchange="actualizarSubtotal(indiceDeFila(this))">
             </td>
             <td class="subtotal text-end fw-bold">
-                Bs. <span id="subtotal_${index}">${detalle.subtotal.toFixed(2)}</span>
+                Bs. <span class="subtotal-valor">${(parseFloat(detalle.subtotal) || 0).toFixed(2)}</span>
             </td>
             <td>
                 <span class="badge bg-light text-dark">${detalle.medida}</span>
                 <div class="presentacion-wrap"></div>
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-danger btn-sm" onclick="solicitarEliminacionDetalle(${index})">
+                <button type="button" class="btn btn-danger btn-sm" onclick="solicitarEliminacionDetalle(indiceDeFila(this))">
                     <i class="fas fa-trash"></i>
                 </button>
             </td>
@@ -161,8 +161,20 @@ function agregarFilaDetalle(detalle, index) {
     $('#cuerpoDetalles').append(fila);
 
     if (detalle.TipoItem === 'INSUMO') {
-        cargarPresentaciones(detalle);
+        if (detalle.presentaciones) {
+            mostrarPresentaciones(detalle);
+        } else {
+            cargarPresentaciones(detalle);
+        }
     }
+}
+
+// Vuelve a dibujar todas las filas para que índice, fila y datos siempre coincidan.
+function renderizarDetalles() {
+    $('#cuerpoDetalles tr:not(#sinDetalles)').remove();
+    detalles.forEach((detalle, index) => agregarFilaDetalle(detalle, index));
+    $('#sinDetalles').toggle(detalles.length === 0);
+    actualizarTotal();
 }
 
 // Presentaciones de compra del insumo (ej. Quintal = 46 kg). La cantidad y el precio se ingresan
@@ -172,23 +184,27 @@ function cargarPresentaciones(detalle) {
 
     $.post(COMPRA_CONFIG.urlObtenerPresentaciones, { idInsumo: detalle.IdItemSeleccionado, idPresentacionActual: detalle.IdPresentacion || null }, function (lista) {
         detalle.presentaciones = lista || [];
-        const index = detalles.indexOf(detalle);
-        if (index < 0 || detalle.presentaciones.length === 0) return;
-
-        const abrev = escaparHtml(detalle.abreviatura || '');
-        let opciones = `<option value="">${abrev || escaparHtml(detalle.medida)}</option>`;
-        detalle.presentaciones.forEach(function (p) {
-            const sel = String(p.id) === String(detalle.IdPresentacion) ? 'selected' : '';
-            opciones += `<option value="${parseInt(p.id, 10)}" ${sel}>${escaparHtml(p.nombre)} (${parseFloat(p.factor)} ${abrev})</option>`;
-        });
-
-        const $wrap = $('#filaDetalle_' + index + ' .presentacion-wrap');
-        $wrap.html(`
-            <select class="form-select form-select-sm mt-1 presentacion" onchange="cambiarPresentacion(this)">${opciones}</select>
-            <small class="text-muted equivalencia"></small>
-        `);
-        actualizarEquivalencia(index);
+        mostrarPresentaciones(detalle);
     });
+}
+
+function mostrarPresentaciones(detalle) {
+    const index = detalles.indexOf(detalle);
+    if (index < 0 || detalle.presentaciones.length === 0) return;
+
+    const abrev = escaparHtml(detalle.abreviatura || '');
+    let opciones = `<option value="">${abrev || escaparHtml(detalle.medida)}</option>`;
+    detalle.presentaciones.forEach(function (p) {
+        const sel = String(p.id) === String(detalle.IdPresentacion) ? 'selected' : '';
+        opciones += `<option value="${parseInt(p.id, 10)}" ${sel}>${escaparHtml(p.nombre)} (${parseFloat(p.factor)} ${abrev})</option>`;
+    });
+
+    const $wrap = $('#filaDetalle_' + index + ' .presentacion-wrap');
+    $wrap.html(`
+        <select class="form-select form-select-sm mt-1 presentacion" onchange="cambiarPresentacion(this)">${opciones}</select>
+        <small class="text-muted equivalencia"></small>
+    `);
+    actualizarEquivalencia(index);
 }
 
 function escaparHtml(texto) {
@@ -213,8 +229,19 @@ function actualizarEquivalencia(index) {
         $eq.text('');
         return;
     }
-    const total = (parseFloat(detalle.cantidad) || 0) * parseFloat(p.factor);
-    $eq.text('= ' + parseFloat(total.toFixed(4)) + ' ' + detalle.abreviatura + ' al stock');
+    const cantidad = parseFloat(detalle.cantidad) || 0;
+    const total = cantidad * parseFloat(p.factor);
+    let texto = '= ' + parseFloat(total.toFixed(4)) + ' ' + detalle.abreviatura + ' de ' + detalle.nombre;
+    if (p.componentes) {
+        // "2 Ala, 2 Pierna" por presentación -> se multiplica por la cantidad comprada.
+        const extras = p.componentes.split(', ').map(function (c) {
+            const partes = c.split(' ');
+            const factor = parseFloat(partes.shift()) || 0;
+            return parseFloat((factor * cantidad).toFixed(4)) + ' ' + partes.join(' ');
+        });
+        texto += ' + ' + extras.join(', ');
+    }
+    $eq.text(texto + ' al stock');
 }
 
 function actualizarSubtotal(index) {
@@ -226,7 +253,7 @@ function actualizarSubtotal(index) {
     detalles[index].precioUnitario = precio;
     detalles[index].subtotal = subtotal;
 
-    $('#subtotal_' + index).text(subtotal.toFixed(2));
+    $('#filaDetalle_' + index + ' .subtotal-valor').text(subtotal.toFixed(2));
     actualizarEquivalencia(index);
     actualizarTotal();
 }
@@ -237,24 +264,26 @@ function solicitarEliminacionDetalle(index) {
 
     confirmarEliminacion(nombre, function () {
         detalles.splice(index, 1);
-        $('#filaDetalle_' + index).remove();
-
-        detalles.forEach((detalle, nuevoIndex) => {
-            const filaExistente = $('#cuerpoDetalles tr:not(#sinDetalles)').eq(nuevoIndex);
-            if (filaExistente.length) {
-                filaExistente.attr('id', 'filaDetalle_' + nuevoIndex);
-                filaExistente.find('.cantidad').attr('data-index', nuevoIndex).attr('onchange', 'actualizarSubtotal(' + nuevoIndex + ')');
-                filaExistente.find('.precio').attr('data-index', nuevoIndex).attr('onchange', 'actualizarSubtotal(' + nuevoIndex + ')');
-                filaExistente.find('.btn-danger').attr('onclick', 'solicitarEliminacionDetalle(' + nuevoIndex + ')');
-            }
-        });
-
-        if (detalles.length === 0) {
-            $('#sinDetalles').show();
-        }
-
-        actualizarTotal();
+        renderizarDetalles();
     });
+}
+
+// Lo que se envía es exactamente lo que el usuario ve en cada fila (cantidad, precio y presentación).
+function sincronizarDetallesConFilas() {
+    detalles.forEach(function (detalle, index) {
+        const $fila = $('#filaDetalle_' + index);
+        if (!$fila.length) return;
+        const cantidad = parseFloat($fila.find('.cantidad').val()) || 0;
+        const precio = parseFloat($fila.find('.precio').val()) || 0;
+        const $presentacion = $fila.find('.presentacion');
+        detalle.cantidad = cantidad;
+        detalle.precioUnitario = precio;
+        detalle.subtotal = cantidad * precio;
+        if ($presentacion.length) {
+            detalle.IdPresentacion = $presentacion.val() ? parseInt($presentacion.val(), 10) : null;
+        }
+    });
+    actualizarTotal();
 }
 
 function actualizarTotal() {
@@ -356,6 +385,7 @@ $('#formCompra').submit(function (e) {
         reverseButtons: true
     }).then((result) => {
         if (result.isConfirmed) {
+            sincronizarDetallesConFilas();
             const detallesParaEnviar = detalles.map(d => ({
                 IdItemSeleccionado: d.IdItemSeleccionado,
                 TipoItem: d.TipoItem,

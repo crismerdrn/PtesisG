@@ -10,6 +10,8 @@ namespace CapaModelo
         public int INSUMO_id_insumo { get; set; }
         public string nombre { get; set; }
         public decimal factor { get; set; }
+        // Otros insumos que suma la presentación (ej. Pollo entero -> Ala, Pierna, Contrapierna).
+        public string componentes { get; set; }
         public bool estado { get; set; }
         public DateTime fecha_registro { get; set; }
     }

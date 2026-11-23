@@ -491,14 +491,21 @@
             if (!nombre) return;
             const telefono = prompt('Teléfono o Celular:', '0000000');
 
-            $.post('@Url.Action("CrearClienteRapido", "Venta")', { nombre: nombre, telefono: telefono, email: 'cliente@pos.com' }, function (res) {
+            $.post('@Url.Action("CrearClienteRapido", "Venta")', {
+                __RequestVerificationToken: $('input[name="__RequestVerificationToken"]').first().val(),
+                nombre: nombre,
+                telefono: telefono
+            }, function (res) {
                 if (res.success) {
-                    const $select =$('#ClienteSelect');
-                    $select.append(new Option(res.cliente.text, res.cliente.id, true, true)).trigger('change');
+                    const $select = $('#ClienteSelect');
+                    $select.find('option[value="' + res.cliente.id + '"]').remove();
+                    $select.append(new Option(res.cliente.text, res.cliente.id, true, true)).val(String(res.cliente.id)).trigger('change');
                     alert('Cliente agregado.');
                 } else {
                     alert('Error: ' + res.message);
                 }
+            }).fail(function () {
+                alert('No se pudo registrar el cliente. Intente nuevamente.');
             });
         }
 

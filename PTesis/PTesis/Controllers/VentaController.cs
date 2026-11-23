@@ -240,7 +240,8 @@ namespace PTesis.Controllers
 
                 if (!validacionStock.StockSuficiente)
                 {
-                    TempData["Error"] = "Stock insuficiente para completar la venta: " + validacionStock.Mensaje;
+                    TempData["Error"] = "Stock insuficiente para completar la venta: " + validacionStock.Mensaje +
+                        ". Si falta una guarnición, puede desmarcarla en el producto o registrar una compra de ese insumo.";
                     ViewBag.ValidacionesStock = validacionStock.ValidacionesStock;
                     CargarDatosParaVista(venta.CLIENTE_id_cliente, venta.TIPO_VENTA_id_tipoVenta);
                     return View(venta);
@@ -873,6 +874,35 @@ namespace PTesis.Controllers
             {
                 return Json(new { success = false, message = "Error: " + ex.Message });
             }
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public JsonResult CrearClienteRapido(string nombre, string telefono)
+        {
+            if (!TienePermiso("Ventas") && !PuedeCrear("Clientes"))
+                return Json(new { success = false, message = "No tiene permisos para registrar clientes." });
+
+            nombre = (nombre ?? "").Trim();
+            if (nombre.Length == 0)
+                return Json(new { success = false, message = "Ingrese el nombre del cliente." });
+
+            // El SP exige nombre y apellido por separado: la primera palabra es el nombre, el resto el apellido.
+            int espacio = nombre.IndexOf(' ');
+            var cliente = new CMClientes
+            {
+                Nombre = espacio > 0 ? nombre.Substring(0, espacio) : nombre,
+                Apellido = espacio > 0 ? nombre.Substring(espacio + 1).Trim() : "-",
+                Telefono = string.IsNullOrWhiteSpace(telefono) ? "0000000" : telefono.Trim(),
+                Estado = true
+            };
+
+            string mensaje;
+            int idCliente = cdClientes.Registrar(cliente, out mensaje);
+            if (idCliente <= 0)
+                return Json(new { success = false, message = string.IsNullOrEmpty(mensaje) ? "No se pudo registrar el cliente." : mensaje });
+
+            return Json(new { success = true, cliente = new { id = idCliente, text = cliente.NombreCompleto } });
         }
 
         #endregion

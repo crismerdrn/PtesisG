@@ -21,7 +21,7 @@ namespace PTesis.Controllers
                     return RedirectToAction("Index", "Home");
                 }
 
-                ViewBag.PuedeCrear = TienePermiso("TipoProducto");
+                ViewBag.PuedeCrear = PuedeCrear("TipoProducto");
                 ViewBag.PuedeEditar = PuedeEditar("TipoProducto");
                 ViewBag.PuedeEliminar = PuedeEliminar("TipoProducto");
 
@@ -64,7 +64,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                if (!TienePermiso("TipoProducto"))
+                if (!PuedeCrear("TipoProducto"))
                 {
                     TempData["Error"] = "No tiene permisos para crear Tipos de Producto";
                     return RedirectToAction("Index");
@@ -85,7 +85,7 @@ namespace PTesis.Controllers
         {
             try
             {
-                if (!TienePermiso("TipoProducto"))
+                if (!PuedeCrear("TipoProducto"))
                 {
                     TempData["Error"] = "No tiene permisos para crear Tipos de Producto";
                     return RedirectToAction("Index");
